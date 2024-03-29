@@ -9,7 +9,7 @@ Esta sección aún está en desarollo pero incluirá:
 
 ## Proyectos Destacados
 
-Aquí encontrarás una selección de algunos de mis proyectos más destacados:
+Aquí encontrarás una selección de algunos de mis proyectos:
 
 ## Tecnologías y Herramientas
 
