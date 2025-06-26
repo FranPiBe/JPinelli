@@ -10,7 +10,7 @@ Welcome! This repository showcases projects and experiments that I have develope
 - **Model practice** – Notebooks exploring advanced regression, classification and model evaluation.
 - **Radiobases highways** – Correlation analysis between base stations and highway networks.
 - **Workflow grain model** – Data pipeline and model training for grain quality prediction.
-- **sql processes** – JSON definitions for SQL-based ETL processes.
+- **sql processes** – JSON definitions for ETLs built with Zepe and Sqoops to Teradata.
 
 Each folder contains notebooks, scripts or reports related to its topic. Some material originates from older work but remains here for reference.
 

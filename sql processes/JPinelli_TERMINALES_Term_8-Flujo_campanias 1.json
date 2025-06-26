@@ -1,1 +1,513 @@
-﻿{"paragraphs":[{"title":"Nueva versión - nov 21","text":"%jdbc(hive)\n\ndrop table sandbox_datascientist.jfp_terminales_flujo_01;\ncreate table sandbox_datascientist.jfp_terminales_flujo_01 stored as orc as\nselect \na.*,\ncase \n-- when a.fl_terminal='Sin Usim' and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' then 'CASIM'\nwhen substring(c1.imsi,8,1) <> '9' and d1.banda_general_tx='LTE Compatible' and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' then 'CASIM'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='actualizable' and a.fl_apple=0 then 'Actualizacion_Android'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='actualizable' and a.fl_apple=1 then 'Actualizacion_Apple'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='Obsoleto' and a.fl_apple=1 then 'CATER_APPLE'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and (a.fl_total_so='Obsoleto' and a.fl_apple=0) then 'CATER_ANDROID'\nwhen a.ani=c.ani then 'Mal configurado'\nend as FL_CAMPANIA\nfrom sandbox.jg_tablero_terminales a\n--------------------Modificacion 6/4/22-----------------------------------------------\n\n-- inner join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\ninner join ACCESS_DATA.AT_Parque_M b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes \nleft join sandbox_datascientist.jfp_imsis_trafico_01 c1 on a.ani=substring(c1.ani,3,10)\nleft join access_data.at_tacs_gsma_m d1 on a.tac_nr=d1.tac_nr and d1.periodo_nr=date_format(add_months(current_date,-1),'yyyyMM') ---------------------------------------Cambiar periodo fecha \n----------------------------------------------------------------------------------------\n-- left join (select mes, ani, count(*) from sandbox.jg_terminales_mal_config where mes >= 202109 group by mes, ani) c on a.ani = c.ani and a.mes =c.mes\nleft join (select mes, ani, count(*) from sandbox.jg_terminales_mal_config where mes >= cast(date_format(add_months(current_date,-6),'yyyyMM') as int) group by mes, ani) c on a.ani = c.ani and a.mes =c.mes                                                                                                                                     ------------MODIF JB 13/10/22\n-- where a.mes>=202109\nwhere a.mes>=cast(date_format(add_months(current_date,-6),'yyyyMM') as int)                                                                         ------------MODIF JB 13/10/22\nand b.Suscripcion_CD NOT LIKE 'K%'\nand b.Linea_Negocio_CD = 'WRLS'\n;\n\ndrop table sandbox_datascientist.jfp_terminales_flujo_02;\ncreate table sandbox_datascientist.jfp_terminales_flujo_02 stored as orc as\nselect \na.*,\nnvl(b.FL_CAMPANIA, c.FL_CAMPANIA) as fl_campania_n_1\nfrom sandbox_datascientist.jfp_terminales_flujo_01 a \nleft join sandbox_datascientist.jfp_terminales_flujo_01 b on a.ani=b.ani and a.mes=b.mes+1\nleft join sandbox_datascientist.jfp_terminales_flujo_01 c on a.ani=c.ani and a.mes=c.mes+89\n-- where a.mes>=202109\nwhere a.mes>=cast(date_format(add_months(current_date,-6),'yyyyMM') as int)\n;\n\n\ndrop table sandbox_datascientist.jfp_terminales_flujo_03;\ncreate table sandbox_datascientist.jfp_terminales_flujo_03 stored as orc as\nselect \na.*,\ncase \nwhen fl_campania_n_1 is null and FL_CAMPANIA is not null then 'ingresa'\nwhen fl_campania_n_1 is not null and FL_CAMPANIA is not null then 'mantiene'\nwhen fl_campania_n_1 is not null and FL_CAMPANIA is null then 'sale'\nend as fl_flujo\nfrom sandbox_datascientist.jfp_terminales_flujo_02 a\n;\n\ndrop table sandbox_datascientist.jfp_terminales_flujo_04;\ncreate table sandbox_datascientist.jfp_terminales_flujo_04 stored as orc as\nselect \na.*,\ncase  when fl_flujo= 'sale' then fl_campania_n_1 \n    when fl_flujo in ('ingresa','mantiene') then fl_campania\n    else 0 end as fl_camp_compl\nfrom sandbox_datascientist.jfp_terminales_flujo_03 a\n;","user":"jpinelli","dateUpdated":"2024-03-11T11:02:29-0300","config":{"editorSetting":{"editOnDblClick":false,"language":"sql","completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","fontSize":9,"title":true,"results":{},"enabled":true,"editorHide":false},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 113798660"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 113808345"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 113808345"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 113808345"}]},"apps":[],"jobName":"paragraph_1652465276745_770245174","id":"20211022-101315_333063919","dateCreated":"2022-05-13T15:07:56-0300","dateStarted":"2024-01-11T19:09:23-0300","dateFinished":"2024-01-11T19:46:53-0300","status":"FINISHED","progressUpdateIntervalMs":500,"focus":true,"$$hashKey":"object:54"},{"title":"Salida","text":"%jdbc(hive)\n\nselect \na.mes\t,\ncase \nwhen a.tipo_cliente_de like '%Individuo%' then 'Individuo' \nwhen a.tipo_cliente_de not like '%Individuo%' then Tipo_Organizacion_DE\nelse 'N/A'\nend as sub_segmento,\ncase when a.producto like '%Prepago%' then 1 else 0 end as fl_prepago\t,\na.fl_campania\t,\na.fl_flujo\t,\na.fl_camp_compl\t,\ncase when a.fl_region = 'AMBA' then 'AMBA'\nwhen a.fl_region like 'INT%' then 'INT'\nelse 'No informado' end as Region,\nb.m2m_fl,\ncase when b.score_crediticio_nr between 0 and 99 then 1 else 0 end fl_score_cred,\ncount(1) as q\nfrom  sandbox_datascientist.jfp_terminales_flujo_04 a\n\n--------------------Modificacion 6/4/22-----------------------------------------------\n\n-- inner join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\nleft join ACCESS_DATA.AT_Parque_M b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes \nwhere b.Suscripcion_CD NOT LIKE 'K%'\nand b.Linea_Negocio_CD = 'WRLS'\nand a.mes=date_format(add_months(current_date,-1),'yyyyMM')\n----------------------------------------------------------------------------------------\ngroup by \na.mes\t,\ncase \nwhen a.tipo_cliente_de like '%Individuo%' then 'Individuo' \nwhen a.tipo_cliente_de not like '%Individuo%' then Tipo_Organizacion_DE\nelse 'N/A'\nend,\ncase when a.producto like '%Prepago%' then 1 else 0 end \t,\ncase when a.fl_region = 'AMBA' then 'AMBA'\nwhen a.fl_region like 'INT%' then 'INT'\nelse 'No informado' end,\na.fl_campania\t,\na.fl_flujo\t,\na.fl_camp_compl ,\na.fl_region,\nm2m_fl,\ncase when b.score_crediticio_nr between 75 and 99 then 1 else 0 end\n;","user":"jpinelli","dateUpdated":"2022-09-20T15:10:04-0300","config":{"tableHide":false,"editorSetting":{"editOnDblClick":false,"language":"sql","completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"fontSize":9,"title":true,"results":{"0":{"graph":{"mode":"table","height":300,"optionOpen":false,"setting":{"table":{"tableGridState":{"columns":[{"name":"a.mes","visible":true,"width":"*","sort":{},"filters":[{}],"pinned":""},{"name":"sub_segmento","visible":true,"width":"*","sort":{},"filters":[{}],"pinned":""},{"name":"fl_prepago","visible":true,"width":"*","sort":{},"filters":[{}],"pinned":""},{"name":"a.fl_campania","visible":true,"width":"*","sort":{"priority":0,"direction":"desc"},"filters":[{}],"pinned":""},{"name":"a.fl_flujo","visible":true,"width":"*","sort":{},"filters":[{}],"pinned":""},{"name":"a.fl_camp_compl","visible":true,"width":"*","sort":{},"filters":[{}],"pinned":""},{"name":"region","visible":true,"width":"*","sort":{},"filters":[{}],"pinned":""},{"name":"b.m2m_fl","visible":true,"width":"*","sort":{},"filters":[{}],"pinned":""},{"name":"q","visible":true,"width":"*","sort":{},"filters":[{}],"pinned":""}],"scrollFocus":{},"selection":[],"grouping":{"grouping":[],"aggregations":[],"rowExpandedStates":{}},"treeView":{},"pagination":{"paginationCurrentPage":1,"paginationPageSize":250}},"tableColumnTypeState":{"names":{"a.mes":"string","sub_segmento":"string","fl_prepago":"string","a.fl_campania":"string","a.fl_flujo":"string","a.fl_camp_compl":"string","region":"string","b.m2m_fl":"string","q":"string"},"updated":false},"tableOptionSpecHash":"[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]","tableOptionValue":{"useFilter":false,"showPagination":false,"showAggregationFooter":false},"updated":false,"initialized":false}},"commonSetting":{}}}},"enabled":true},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TABLE","data":"a.mes\tsub_segmento\tfl_prepago\ta.fl_campania\ta.fl_flujo\ta.fl_camp_compl\tregion\tb.m2m_fl\tq\n202203\tEmpresas\t0\tnull\tsale\tCATER_ANDROID\tINT\t0\t175\n202203\tIndividuo\t0\tnull\tnull\t0\tINT\t0\t1692910\n202203\tIndividuo\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t18600\n202203\tIndividuo\t1\tActualizacion_Apple\tingresa\tActualizacion_Apple\tAMBA\t0\t3930\n202203\tIndividuo\t1\tMal configurado\tmantiene\tMal configurado\tAMBA\t0\t30222\n202203\tMayoristas\t0\tMal configurado\tmantiene\tMal configurado\tINT\t0\t28\n202203\tNegocios Premium\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tAMBA\t0\t1657\n202203\tNegocios Top\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t2899\n202203\tNegocios Top\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t936\n202203\tEmpresas\t0\tnull\tsale\tActualizacion_Apple\tINT\t0\t43\n202203\tEmpresas\t0\tnull\tsale\tMal configurado\tINT\t0\t128\n202203\tIndividuo\t0\tCASIM\tmantiene\tCASIM\tAMBA\t0\t20615\n202203\tIndividuo\t0\tnull\tsale\tCATER_ANDROID\tINT\tnull\t1\n202203\tIndividuo\t1\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\t0\t4704\n202203\tIndividuo\t1\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tINT\t0\t1083\n202203\tMayoristas\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t105\n202203\tNegocio Emprendedor\t0\tnull\tsale\tMal configurado\tAMBA\t0\t395\n202203\tNegocios Top\t0\tCASIM\tingresa\tCASIM\tAMBA\t1\t8\n202203\tIndividuo\t1\tCATER_APPLE\tingresa\tCATER_APPLE\tAMBA\t0\t691\n202203\tIndividuo\t1\tnull\tsale\tActualizacion_Apple\tINT\t0\t694\n202203\tIndividuo\t1\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t13411\n202203\tNegocio Emprendedor\t1\tnull\tnull\t0\tAMBA\t0\t7\n202203\tNegocios Top\t0\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tAMBA\t0\t756\n202203\tNegocios Top\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tAMBA\t1\t5\n202203\tEmpresas\t0\tnull\tsale\tMal configurado\tAMBA\t1\t2\n202203\tIndividuo\t1\tCATER_APPLE\tmantiene\tCATER_APPLE\tAMBA\t0\t1848\n202203\tMayoristas\t0\tnull\tsale\tActualizacion_Android\tAMBA\t0\t6\n202203\tNegocio Emprendedor\t0\tnull\tsale\tMal configurado\tINT\t0\t308\n202203\tNegocios Premium\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tAMBA\t0\t145\n202203\tNegocios Top\t0\tnull\tsale\tActualizacion_Android\tINT\t1\t1\n202203\tNegocios Top\t0\tnull\tsale\tCATER_APPLE\tINT\t0\t3\n202203\tEmpresas\t0\tMal configurado\tmantiene\tMal configurado\tINT\t0\t270\n202203\tMayoristas\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\t0\t6\n202203\tNegocio Emprendedor\t0\tnull\tsale\tActualizacion_Android\tINT\t0\t431\n202203\tNegocios Premium\t0\tnull\tsale\tActualizacion_Android\tAMBA\t0\t253\n202203\tNegocios Premium\t0\tCASIM\tmantiene\tCASIM\tINT\t0\t328\n202203\tNegocios Premium\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tINT\t0\t14\n202203\tNegocios Top\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t0\t933\n202203\tEmpresas\t0\tMal configurado\tingresa\tMal configurado\tAMBA\t1\t6\n202203\tEmpresas\t0\tMal configurado\tingresa\tMal configurado\tINT\t1\t1\n202203\tIndividuo\t1\tnull\tsale\tCASIM\tAMBA\t0\t968\n202203\tIndividuo\t1\tCASIM\tingresa\tCASIM\tINT\t0\t2305\n202203\tMayoristas\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tAMBA\t0\t37\n202203\tMayoristas\t0\tnull\tsale\tMal configurado\tINT\t0\t8\n202203\tNegocios Premium\t0\tMal configurado\tingresa\tMal configurado\tAMBA\t0\t225\n202203\tNegocios Premium\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t0\t99\n202203\tNegocios Premium\t0\tMal configurado\tingresa\tMal configurado\tINT\t0\t56\n202203\tEmpresas\t0\tMal configurado\tingresa\tMal configurado\tAMBA\t0\t286\n202203\tIndividuo\t0\tnull\tnull\t0\tAMBA\t1\t1\n202203\tIndividuo\t1\tMal configurado\tmantiene\tMal configurado\tINT\t0\t21349\n202203\tMayoristas\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tAMBA\t0\t8\n202203\tNegocio Emprendedor\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t1\t9\n202203\tNegocios Premium\t1\tnull\tnull\t0\tINT\t0\t1\n202203\tNegocios Top\t0\tnull\tsale\tCATER_ANDROID\tINT\t1\t3\n202203\tNegocios Top\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tINT\t0\t65\n202203\tNegocio Emprendedor\t0\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tINT\t0\t247\n202203\tNegocios Top\t0\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tINT\t0\t629\n202203\tEmpresas\t0\tnull\tsale\tCATER_APPLE\tINT\t0\t4\n202203\tIndividuo\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t0\t2827\n202203\tIndividuo\t0\tCATER_APPLE\tingresa\tCATER_APPLE\tINT\t0\t168\n202203\tIndividuo\t1\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\tnull\t1\n202203\tNegocio Emprendedor\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t728\n202203\tNegocios Premium\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t0\t366\n202203\tNegocios Top\t0\tnull\tsale\tCASIM\tINT\t1\t10\n202203\tEmpresas\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tAMBA\t0\t303\n202203\tIndividuo\t0\tnull\tsale\tActualizacion_Android\tAMBA\t0\t12001\n202203\tIndividuo\t0\tMal configurado\tmantiene\tMal configurado\tINT\t0\t6752\n202203\tIndividuo\t1\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tINT\t0\t4725\n202203\tMayoristas\t0\tCASIM\tmantiene\tCASIM\tINT\t0\t1\n202203\tNegocio Emprendedor\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tAMBA\t1\t1\n202203\tNegocio Emprendedor\t0\tCASIM\tingresa\tCASIM\tINT\t0\t46\n202203\tNegocios Premium\t0\tnull\tsale\tCATER_APPLE\tAMBA\t0\t24\n202203\tEmpresas\t0\tnull\tnull\t0\tAMBA\t1\t2928\n202203\tIndividuo\t1\tnull\tnull\t0\tINT\t0\t344065\n202203\tMayoristas\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t25\n202203\tNegocio Emprendedor\t0\tCASIM\tmantiene\tCASIM\tAMBA\t0\t1455\n202203\tNegocios Premium\t0\tCASIM\tingresa\tCASIM\tINT\t1\t1\n202203\tNegocios Premium\t1\tnull\tnull\t0\tINT\t0\t1\n202203\tIndividuo\t0\tCASIM\tingresa\tCASIM\tAMBA\t0\t508\n202203\tIndividuo\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\t0\t4953\n202203\tNegocio Emprendedor\t0\tnull\tsale\tCATER_APPLE\tINT\t0\t21\n202203\tNegocios Premium\t0\tnull\tsale\tCASIM\tAMBA\t0\t11\n202203\tNegocios Premium\t0\tCASIM\tingresa\tCASIM\tINT\t0\t54\n202203\tNegocios Top\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t413\n202203\tIndividuo\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tAMBA\t0\t2051\n202203\tNegocio Emprendedor\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t0\t160\n202203\tNegocios Premium\t0\tnull\tnull\t0\tINT\t0\t50381\n202203\tNegocios Premium\t0\tnull\tsale\tMal configurado\tINT\t1\t2\n202203\tNegocios Premium\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t123\n202203\tNegocios Top\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\t0\t230\n202203\tEmpresas\t0\tnull\tsale\tCATER_APPLE\tAMBA\t0\t11\n202203\tEmpresas\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\t0\t59\n202203\tEmpresas\t0\tCASIM\tmantiene\tCASIM\tINT\t0\t406\n202203\tMayoristas\t0\tCASIM\tingresa\tCASIM\tINT\t0\t1\n202203\tMayoristas\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t1\n202203\tNegocios Premium\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tAMBA\t0\t147\n202203\tEmpresas\t0\tMal configurado\tmantiene\tMal configurado\tINT\t1\t2\n202203\tIndividuo\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t5689\n202203\tIndividuo\t1\tActualizacion_Android\tmantiene\tActualizacion_Android\tAMBA\tnull\t1\n202203\tIndividuo\t1\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t47721\n202203\tIndividuo\t1\tActualizacion_Apple\tingresa\tActualizacion_Apple\tINT\t0\t1607\n202203\tIndividuo\t1\tCATER_APPLE\tmantiene\tCATER_APPLE\tINT\t0\t171\n202203\tNegocio Emprendedor\t0\tCASIM\tmantiene\tCASIM\tINT\t0\t308\n202203\tNegocios Premium\t0\tCASIM\tingresa\tCASIM\tAMBA\t0\t44\n202203\tNegocios Top\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tAMBA\t0\t84\n202203\tNegocios Top\t1\tnull\tnull\t0\tINT\t0\t3\n202203\tEmpresas\t0\tnull\tsale\tActualizacion_Android\tINT\t0\t203\n202203\tEmpresas\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t172\n202203\tNegocios Premium\t0\tnull\tsale\tActualizacion_Apple\tINT\t0\t217\n202203\tNegocios Premium\t0\tnull\tsale\tMal configurado\tINT\t0\t49\n202203\tNegocios Premium\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\t0\t118\n202203\tNegocios Top\t0\tnull\tsale\tCASIM\tAMBA\t0\t15\n202203\tNegocio Emprendedor\t0\tCASIM\tingresa\tCASIM\tAMBA\t1\t2\n202203\tNegocio Emprendedor\t1\tMal configurado\tmantiene\tMal configurado\tAMBA\t0\t1\n202203\tNegocios Top\t0\tCATER_APPLE\tingresa\tCATER_APPLE\tAMBA\t0\t30\n202203\tNegocios Top\t0\tnull\tsale\tCASIM\tINT\t1\t2\n202203\tNegocios Top\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t1\t14094\n202203\tIndividuo\t0\tCASIM\tingresa\tCASIM\tINT\t0\t608\n202203\tNegocios Top\t0\tnull\tsale\tMal configurado\tINT\t0\t112\n202203\tIndividuo\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t17726\n202203\tIndividuo\t0\tActualizacion_Apple\tingresa\tActualizacion_Apple\tINT\t0\t2239\n202203\tIndividuo\t1\tCATER_APPLE\tingresa\tCATER_APPLE\tINT\t0\t240\n202203\tNegocio Emprendedor\t0\tnull\tsale\tCATER_ANDROID\tINT\t0\t282\n202203\tNegocios Premium\t0\tCASIM\tmantiene\tCASIM\tINT\t1\t1\n202203\tNegocios Top\t0\tMal configurado\tingresa\tMal configurado\tAMBA\t0\t355\n202203\tNegocios Top\t0\tCASIM\tmantiene\tCASIM\tINT\t0\t388\n202203\tIndividuo\t1\tActualizacion_Android\tmantiene\tActualizacion_Android\tAMBA\t0\t75243\n202203\tIndividuo\t1\tCASIM\tmantiene\tCASIM\tAMBA\t0\t27024\n202203\tIndividuo\t1\tCATER_ANDROID\tingresa\tCATER_ANDROID\tAMBA\t0\t30566\n202203\tIndividuo\t1\tnull\tsale\tActualizacion_Android\tINT\t0\t2708\n202203\tMayoristas\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tAMBA\t0\t4\n202203\tMayoristas\t0\tActualizacion_Apple\tingresa\tActualizacion_Apple\tINT\t0\t2\n202203\tNegocios Premium\t0\tCASIM\tmantiene\tCASIM\tAMBA\t0\t1445\n202203\tNegocios Top\t0\tnull\tsale\tCATER_ANDROID\tAMBA\t0\t372\n202203\tNegocios Top\t0\tnull\tsale\tCATER_APPLE\tINT\t0\t21\n202203\tNegocio Emprendedor\t0\tCATER_APPLE\tingresa\tCATER_APPLE\tAMBA\t0\t59\n202203\tNegocio Emprendedor\t0\tMal configurado\tmantiene\tMal configurado\tINT\t0\t1526\n202203\tNegocios Top\t0\tnull\tsale\tActualizacion_Apple\tAMBA\t0\t355\n202203\tNegocios Top\t0\tCASIM\tmantiene\tCASIM\tAMBA\t1\t44\n202203\tNegocios Top\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\t1\t1\n202203\tMayoristas\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t4\n202203\tNegocio Emprendedor\t0\tnull\tnull\t0\tAMBA\t1\t227\n202203\tNegocio Emprendedor\t0\tnull\tnull\t0\tINT\t0\t24990\n202203\tNegocios Top\t0\tnull\tsale\tCASIM\tINT\t0\t16\n202203\tNegocios Top\t0\tnull\tsale\tCATER_ANDROID\tINT\t0\t425\n202203\tNegocios Top\t0\tCASIM\tmantiene\tCASIM\tINT\t1\t52\n202203\tIndividuo\t1\tnull\tnull\t0\tAMBA\tnull\t14\n202203\tNegocio Emprendedor\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tINT\t0\t22\n202203\tNegocio Emprendedor\t0\tMal configurado\tingresa\tMal configurado\tINT\t0\t87\n202203\tNegocio Emprendedor\t0\tMal configurado\tmantiene\tMal configurado\tINT\t0\t364\n202203\tNegocios Top\t0\tnull\tnull\t0\tAMBA\t0\t114612\n202203\tEmpresas\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tAMBA\t1\t6474\n202203\tNegocios Premium\t0\tCASIM\tmantiene\tCASIM\tAMBA\t1\t2\n202203\tNegocios Top\t0\tnull\tsale\tMal configurado\tINT\t1\t5\n202203\tEmpresas\t0\tCASIM\tingresa\tCASIM\tINT\t0\t30\n202203\tIndividuo\t0\tnull\tnull\t0\tINT\t0\t418654\n202203\tIndividuo\t1\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\tnull\t2\n202203\tIndividuo\t1\tCASIM\tingresa\tCASIM\tINT\t0\t840\n202203\tMayoristas\t0\tCASIM\tmantiene\tCASIM\tINT\t0\t131\n202203\tNegocio Emprendedor\t0\tCASIM\tmantiene\tCASIM\tINT\t1\t5\n202203\tNegocios Premium\t0\tnull\tsale\tMal configurado\tAMBA\t0\t185\n202203\tNegocios Premium\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tAMBA\t1\t582\n202203\tNegocios Top\t0\tnull\tnull\t0\tAMBA\t1\t3219\n202203\tNegocios Top\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t716\n202203\tIndividuo\t0\tnull\tsale\tCASIM\tINT\t0\t88\n202203\tIndividuo\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tINT\t0\t814\n202203\tIndividuo\t1\tnull\tsale\tCATER_ANDROID\tINT\t0\t23578\n202203\tIndividuo\t1\tMal configurado\tmantiene\tMal configurado\tINT\tnull\t1\n202203\tMayoristas\t0\tnull\tnull\t0\tAMBA\t0\t1347\n202203\tEmpresas\t0\tnull\tsale\tCATER_ANDROID\tAMBA\t0\t354\n202203\tIndividuo\t0\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tINT\t0\t8972\n202203\tIndividuo\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tAMBA\t0\t7731\n202203\tMayoristas\t0\tnull\tsale\tActualizacion_Apple\tINT\t0\t2\n202203\tNegocio Emprendedor\t0\tnull\tsale\tActualizacion_Android\tAMBA\t0\t558\n202203\tNegocio Emprendedor\t0\tnull\tnull\t0\tINT\t0\t94480\n202203\tNegocio Emprendedor\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t1\t1336\n202203\tNegocios Premium\t0\tnull\tsale\tActualizacion_Android\tINT\t0\t68\n202203\tNegocios Top\t0\tnull\tsale\tCASIM\tINT\t0\t2\n202203\tIndividuo\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tAMBA\t0\t11781\n202203\tNegocios Top\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t1\t11\n202203\tMayoristas\t0\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tAMBA\t0\t6\n202203\tMayoristas\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tAMBA\t0\t1\n202203\tMayoristas\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t0\t30\n202203\tNegocio Emprendedor\t0\tCASIM\tingresa\tCASIM\tINT\t0\t11\n202203\tNegocios Premium\t0\tMal configurado\tmantiene\tMal configurado\tAMBA\t0\t751\n202203\tEmpresas\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tINT\t0\t5\n202203\tIndividuo\t0\tCASIM\tingresa\tCASIM\tINT\t0\t88\n202203\tMayoristas\t0\tMal configurado\tmantiene\tMal configurado\tAMBA\t0\t11\n202203\tNegocio Emprendedor\t0\tMal configurado\tingresa\tMal configurado\tAMBA\t0\t407\n202203\tNegocios Premium\t0\tCASIM\tingresa\tCASIM\tINT\t0\t14\n202203\tNegocios Top\t1\tnull\tnull\t0\tAMBA\t0\t3\n202203\tEmpresas\t0\tnull\tnull\t0\tINT\t0\t42696\n202203\tNegocio Emprendedor\t0\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tAMBA\t0\t2393\n202203\tNegocio Emprendedor\t0\tCASIM\tingresa\tCASIM\tAMBA\t0\t39\n202203\tNegocio Emprendedor\t1\tCASIM\tmantiene\tCASIM\tINT\t0\t1\n202203\tNegocios Premium\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t1688\n202203\tNegocios Top\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tAMBA\t0\t2293\n202203\tNegocio Emprendedor\t0\tCASIM\tmantiene\tCASIM\tAMBA\t1\t37\n202203\tNegocios Top\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tAMBA\t0\t211\n202203\tEmpresas\t0\tnull\tsale\tActualizacion_Android\tINT\t0\t92\n"},{"type":"HTML","data":"<div class=\"result-alert alert-warning\" role=\"alert\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button><strong>Output is truncated</strong> to 200 rows. Learn more about <strong>common.max_count</strong></div>"}]},"apps":[],"jobName":"paragraph_1652465276801_1852701484","id":"20211013-164318_1015117672","dateCreated":"2022-05-13T15:07:56-0300","dateStarted":"2022-05-13T18:34:01-0300","dateFinished":"2022-05-13T18:34:44-0300","status":"FINISHED","progressUpdateIntervalMs":500,"$$hashKey":"object:55"},{"title":"Salida Mal Configurados (DESUSO)","text":"%jdbc(hive)\n\nselect \na.mes\t,\ncase \nwhen a.tipo_cliente_de like '%Individuo%' then 'Individuo' \nwhen a.tipo_cliente_de not like '%Individuo%' then Tipo_Organizacion_DE\nelse 'N/A'\nend as sub_segmento,\ncase when a.producto like '%Prepago%' then 1 else 0 end as fl_prepago\t,\na.fl_campania\t,\na.fl_flujo\t,\ncount(1) as q\nfrom  sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_03 a\nleft join  SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b  on a.ani=b.valor_recurso_primario_cd and a.mes=b.periodo_nr\ngroup by \na.mes\t,\ncase \nwhen a.tipo_cliente_de like '%Individuo%' then 'Individuo' \nwhen a.tipo_cliente_de not like '%Individuo%' then Tipo_Organizacion_DE\nelse 'N/A'\nend,\ncase when a.producto like '%Prepago%' then 1 else 0 end \t,\na.fl_campania\t,\na.fl_flujo\n;","user":"jpinelli","dateUpdated":"2022-05-13T15:07:56-0300","config":{"tableHide":true,"editorSetting":{"editOnDblClick":false,"language":"sql"},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":true,"fontSize":9,"title":true,"results":{"0":{"graph":{"mode":"table","height":300,"optionOpen":false,"setting":{"table":{"tableGridState":{},"tableColumnTypeState":{"names":{"a.mes":"string","sub_segmento":"string","fl_prepago":"string","a.fl_campania":"string","a.fl_flujo":"string","q":"string"},"updated":false},"tableOptionSpecHash":"[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]","tableOptionValue":{"useFilter":false,"showPagination":false,"showAggregationFooter":false},"updated":false,"initialized":false}},"commonSetting":{}}}},"enabled":false},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TABLE","data":"a.mes\tsub_segmento\tfl_prepago\ta.fl_campania\ta.fl_flujo\tq\n202110\tMayoristas\t0\t0\tsale\t12\n202108\tIndividuo\t0\t0\tnull\t4829728\n202109\tNegocio Emprendedor\t0\t0\tnull\t286002\n202107\tIndividuo\t0\t0\tnull\t4796949\n202109\tNegocios Premium\t0\t1\tingresa\t441\n202108\tnull\t0\t0\tnull\t74612\n202110\tnull\t0\t0\tnull\t34543\n202109\tIndividuo\t1\t0\tnull\t3876613\n202108\tNegocios Premium\t0\t0\tnull\t163602\n202109\tIndividuo\t0\t0\tnull\t4860988\n202108\tNo Informado\t1\t0\tnull\t1\n202109\tIndividuo\t1\t0\tsale\t21553\n202110\tNegocio Emprendedor\t1\t0\tnull\t15\n202108\tNegocios Premium\t0\t0\tsale\t606\n202111\tMayoristas\t0\t0\tnull\t4830\n202109\tEmpresas\t0\t0\tnull\t232986\n202109\tMayoristas\t0\t0\tsale\t8\n202108\tMayoristas\t0\t1\tingresa\t15\n202107\tNegocio Emprendedor\t0\t1\tingresa\t4937\n202108\tEmpresas\t0\t1\tmantiene\t2123\n202110\tNegocio Emprendedor\t0\t1\tmantiene\t3536\n202109\tMayoristas\t0\t0\tnull\t5124\n202110\tNegocio Emprendedor\t0\t0\tsale\t869\n202109\tIndividuo\t1\t1\tmantiene\t61346\n202110\tNo Informado\t1\t0\tnull\t1\n202111\tMayoristas\t0\t1\tmantiene\t37\n202107\tNegocio Emprendedor\t0\t0\tnull\t282488\n202109\tNegocios Premium\t0\t0\tsale\t435\n202111\tIndividuo\t0\t0\tnull\t4905096\n202108\tNegocios Top\t1\t0\tnull\t4\n202109\tMayoristas\t0\t1\tingresa\t10\n202109\tNo Informado\t0\t0\tnull\t2\n202110\tEmpresas\t0\t0\tsale\t478\n202110\tNegocios Top\t1\t0\tnull\t3\n202110\tMayoristas\t0\t1\tmantiene\t38\n202111\tNegocio Emprendedor\t0\t1\tingresa\t869\n202108\tIndividuo\t1\t0\tsale\t27590\n202108\tNegocio Emprendedor\t0\t0\tnull\t284829\n202108\tIndividuo\t0\t1\tmantiene\t77700\n202110\tIndividuo\t1\t1\tmantiene\t60964\n202107\tNegocios Top\t0\t0\tnull\t300144\n202111\tNegocio Emprendedor\t1\t0\tnull\t16\n202107\tNegocios Premium\t0\t1\tingresa\t2738\n202110\tMayoristas\t0\t0\tnull\t4866\n202110\tNegocios Premium\t0\t1\tingresa\t375\n202111\tNegocios Premium\t0\t0\tnull\t162541\n202109\tEmpresas\t0\t1\tingresa\t495\n202107\tEmpresas\t0\t0\tnull\t219672\n202108\tIndividuo\t0\t0\tsale\t21546\n202109\tnull\t0\t0\tnull\t1\n202107\tNegocios Top\t1\t0\tnull\t8\n202109\tNegocio Emprendedor\t0\t1\tingresa\t865\n202111\tNegocios Top\t0\t0\tsale\t694\n202110\tIndividuo\t1\t0\tnull\t3879187\n202111\tIndividuo\t1\t0\tsale\t20963\n202107\tIndividuo\t1\t0\tnull\t3840679\n202108\tEmpresas\t0\t1\tingresa\t567\n202109\tNegocios Top\t1\t0\tnull\t3\n202108\tNegocios Premium\t0\t1\tmantiene\t2106\n202110\tNegocio Emprendedor\t0\t0\tnull\t289566\n202110\tNegocios Premium\t0\t0\tsale\t463\n202111\tIndividuo\t1\t1\tingresa\t31477\n202111\tNegocios Premium\t0\t1\tingresa\t490\n202110\tNegocios Top\t0\t1\tmantiene\t3258\n202110\tNegocios Premium\t0\t0\tnull\t163332\n202108\tNegocios Top\t0\t0\tnull\t298827\n202109\tNegocios Top\t0\t0\tnull\t300862\n202110\tIndividuo\t0\t0\tnull\t4886681\n202108\tMayoristas\t0\t0\tnull\t5093\n202111\tNegocio Emprendedor\t0\t1\tmantiene\t3454\n202111\tnull\t0\t0\tnull\t33645\n202108\tIndividuo\t0\t1\tingresa\t18537\n202108\tNegocio Emprendedor\t0\t1\tmantiene\t3740\n202111\tEmpresas\t0\t0\tsale\t458\n202108\tNegocio Emprendedor\t1\t0\tnull\t18\n202108\tMayoristas\t0\t1\tmantiene\t40\n202109\tNegocio Emprendedor\t0\t0\tsale\t803\n202107\tNo Informado\t0\t1\tingresa\t166\n202109\tNegocios Top\t0\t1\tingresa\t791\n202111\tNo Informado\t1\t0\tnull\t1\n202111\tIndividuo\t1\t0\tnull\t3882010\n202111\tNegocio Emprendedor\t1\t1\tmantiene\t1\n202107\tEmpresas\t0\t1\tingresa\t2822\n202108\tMayoristas\t0\t0\tsale\t15\n202109\tNegocios Premium\t1\t0\tnull\t10\n202109\tNegocios Top\t0\t1\tmantiene\t3443\n202107\tNo Informado\t0\t0\tnull\t17098\n202111\tNegocios Top\t0\t1\tingresa\t807\n202107\tNo Informado\t1\t0\tnull\t1\n202110\tIndividuo\t0\t1\tingresa\t17061\n202107\tIndividuo\t0\t1\tingresa\t102568\n202107\tMayoristas\t0\t0\tnull\t4921\n202111\tNegocios Top\t1\t0\tnull\t5\n202111\tMayoristas\t0\t1\tingresa\t16\n202107\tnull\t0\t0\tnull\t36989\n202110\tIndividuo\t1\t1\tingresa\t29528\n202109\tNegocio Emprendedor\t0\t1\tmantiene\t3652\n202109\tNegocios Top\t0\t0\tsale\t729\n202110\tNegocios Top\t0\t1\tingresa\t708\n202108\tIndividuo\t1\t1\tingresa\t29301\n202108\tNegocios Top\t0\t1\tingresa\t806\n202111\tIndividuo\t0\t1\tmantiene\t72539\n202109\tEmpresas\t0\t0\tsale\t481\n202110\tNegocio Emprendedor\t0\t1\tingresa\t772\n202109\tNo Informado\t1\t0\tnull\t1\n202108\tEmpresas\t0\t0\tsale\t654\n202110\tNegocios Premium\t0\t1\tmantiene\t1968\n202110\tNegocios Top\t0\t0\tsale\t821\n202111\tNegocios Premium\t0\t0\tsale\t372\n202111\tIndividuo\t1\t1\tmantiene\t60810\n202108\tNegocios Premium\t1\t0\tnull\t8\n202111\tEmpresas\t0\t0\tnull\t230177\n202108\tNegocio Emprendedor\t0\t0\tsale\t1086\n202108\tNegocios Top\t0\t0\tsale\t1057\n202109\tIndividuo\t1\t1\tingresa\t30702\n202110\tIndividuo\t1\t0\tsale\t22737\n202108\tNo Informado\t0\t0\tnull\t2\n202109\tEmpresas\t0\t1\tmantiene\t2091\n202109\tNegocios Premium\t0\t0\tnull\t162747\n202107\tMayoristas\t0\t1\tingresa\t52\n202108\tNegocios Premium\t0\t1\tingresa\t420\n202110\tNo Informado\t0\t0\tnull\t2\n202107\tNegocio Emprendedor\t1\t0\tnull\t17\n202111\tMayoristas\t0\t0\tsale\t7\n202110\tEmpresas\t0\t0\tnull\t230284\n202109\tIndividuo\t0\t1\tingresa\t18809\n202110\tMayoristas\t0\t1\tingresa\t6\n202110\tNegocios Top\t0\t0\tnull\t297719\n202111\tIndividuo\t0\t1\tingresa\t20370\n202108\tEmpresas\t0\t0\tnull\t234039\n202111\tEmpresas\t0\t1\tmantiene\t1947\n202108\tIndividuo\t1\t1\tmantiene\t62265\n202109\tMayoristas\t0\t1\tmantiene\t44\n202111\tEmpresas\t0\t1\tingresa\t535\n202111\tNegocios Top\t0\t0\tnull\t298547\n202108\tNegocio Emprendedor\t0\t1\tingresa\t883\n202111\tIndividuo\t0\t0\tsale\t15255\n202107\tNegocios Top\t0\t1\tingresa\t4679\n202107\tIndividuo\t1\t1\tingresa\t99370\n202107\tNegocios Premium\t1\t0\tnull\t4\n202109\tIndividuo\t0\t0\tsale\t16870\n202111\tNegocios Premium\t0\t1\tmantiene\t1906\n202109\tNegocio Emprendedor\t1\t0\tnull\t15\n202110\tEmpresas\t0\t1\tingresa\t498\n202110\tIndividuo\t0\t0\tsale\t17846\n202111\tNegocio Emprendedor\t0\t0\tnull\t289357\n202110\tNegocios Premium\t1\t0\tnull\t11\n202107\tNegocios Premium\t0\t0\tnull\t161616\n202110\tIndividuo\t0\t1\tmantiene\t73694\n202111\tNegocio Emprendedor\t0\t0\tsale\t698\n202108\tIndividuo\t1\t0\tnull\t3869118\n202109\tNegocios Premium\t0\t1\tmantiene\t2024\n202111\tNegocios Top\t0\t1\tmantiene\t3145\n202111\tNegocios Premium\t1\t0\tnull\t10\n202108\tNegocios Top\t0\t1\tmantiene\t3479\n202110\tEmpresas\t0\t1\tmantiene\t2012\n202109\tIndividuo\t0\t1\tmantiene\t75804\n"}]},"apps":[],"jobName":"paragraph_1652465276855_2044670614","id":"20211022-100717_341017289","dateCreated":"2022-05-13T15:07:56-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:56"},{"title":"Agregado Oct-21 - Flujo Mal Configurados (DESUSO)","text":"%jdbc(hive)\ndrop table sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_01;\ncreate table sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_01 stored as orc as\nselect \na.*,\ncase when b.ani is not null then 1 else 0 end as FL_CAMPANIA\nfrom sandbox.jg_tablero_terminales a \nleft join sandbox.jg_terminales_mal_config b\non a.ani = b.ani and a.mes = b.mes\nwhere a.mes>=202107\n;\n\ndrop table sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_02;\ncreate table sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_02 stored as orc as\nselect \na.*,\nnvl(b.FL_CAMPANIA, c.FL_CAMPANIA) as fl_campania_n_1\nfrom sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_01 a \nleft join sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_01 b on a.ani=b.ani and a.mes=b.mes+1\nleft join sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_01 c on a.ani=c.ani and a.mes=c.mes+89\n--where a.mes>=202104\n;\n\ndrop table sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_03;\ncreate table sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_03 stored as orc as\nselect \na.*,\ncase \nwhen (fl_campania_n_1 is null or fl_campania_n_1 = 0) and FL_CAMPANIA = 1 then 'ingresa'\nwhen fl_campania_n_1 = 1 and FL_CAMPANIA = 1 then 'mantiene'\nwhen fl_campania_n_1 = 1 and FL_CAMPANIA = 0 then 'sale'\nend as fl_flujo\nfrom sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_02 a\n;","user":"jpinelli","dateUpdated":"2022-05-13T15:07:56-0300","config":{"tableHide":true,"editorSetting":{"editOnDblClick":false,"language":"sql"},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":true,"title":true,"results":{},"enabled":false,"fontSize":9},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"}]},"apps":[],"jobName":"paragraph_1652465276911_1474838753","id":"20211022-100059_598679255","dateCreated":"2022-05-13T15:07:56-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:57"},{"title":"Entradas, salidas y mant de camp SO, cater y casim (desuso)","text":"%jdbc(hive)\n\n-----------Version vieja (cambio en nov21)-------------\n/*drop table sandbox.jg_terminales_flujo_01;\ncreate table sandbox.jg_terminales_flujo_01 stored as orc as\nselect \na.*,\ncase \nwhen a.fl_terminal='Sin Usim' and a.tipo_cliente_de in('Individuo','Empresa') and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' then 'CASIM'\nwhen a.tipo_cliente_de in('Individuo','Empresa') and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='actualizable' and fl_apple=0 then 'Actualizacion_Android'\nwhen a.tipo_cliente_de in('Individuo','Empresa') and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='actualizable' and fl_apple=1 then 'Actualizacion_Apple'\nwhen a.tipo_cliente_de in('Individuo','Empresa') and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='Obsoleto' and fl_apple=1 then 'CATER_APPLE'\nwhen a.tipo_cliente_de in('Individuo','Empresa') and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and (a.fl_total_so='Obsoleto' and fl_apple=0) then 'CATER_ANDROID'\nend as FL_CAMPANIA\nfrom sandbox.jg_tablero_terminales a\nwhere a.mes>=202106\n;*/\n--------------------------------------------------------\n\ndrop table sandbox_datascientist.aoc_jbr_terminales_flujo_01;\ncreate table sandbox_datascientist.aoc_jbr_terminales_flujo_01 stored as orc as\nselect \na.*,\ncase \nwhen a.fl_terminal='Sin Usim' and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' then 'CASIM'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='actualizable' and fl_apple=0 then 'Actualizacion_Android'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='actualizable' and fl_apple=1 then 'Actualizacion_Apple'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='Obsoleto' and fl_apple=1 then 'CATER_APPLE'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and (a.fl_total_so='Obsoleto' and fl_apple=0) then 'CATER_ANDROID'\nend as FL_CAMPANIA\nfrom sandbox.jg_tablero_terminales a\nwhere a.mes>=202106\n;\n\ndrop table sandbox_datascientist.aoc_jbr_terminales_flujo_02;\ncreate table sandbox_datascientist.aoc_jbr_terminales_flujo_02 stored as orc as\nselect \na.*,\nnvl(b.FL_CAMPANIA, c.FL_CAMPANIA) as fl_campania_n_1\nfrom sandbox_datascientist.aoc_jbr_terminales_flujo_01 a \nleft join sandbox_datascientist.aoc_jbr_terminales_flujo_01 b on a.ani=b.ani and a.mes=b.mes+1\nleft join sandbox_datascientist.aoc_jbr_terminales_flujo_01 c on a.ani=c.ani and a.mes=c.mes+89\nwhere a.mes>=202106\n;\n\n\ndrop table sandbox_datascientist.aoc_jbr_terminales_flujo_03;\ncreate table sandbox_datascientist.aoc_jbr_terminales_flujo_03 stored as orc as\nselect \na.*,\ncase \nwhen fl_campania_n_1 is null and FL_CAMPANIA is not null then 'ingresa'\nwhen fl_campania_n_1 is not null and FL_CAMPANIA is not null then 'mantiene'\nwhen fl_campania_n_1 is not null and FL_CAMPANIA is null then 'sale'\nend as fl_flujo\nfrom sandbox_datascientist.aoc_jbr_terminales_flujo_02 a\n;\n\ndrop table sandbox_datascientist.aoc_jbr_terminales_flujo_04;\ncreate table sandbox_datascientist.aoc_jbr_terminales_flujo_04 stored as orc as\nselect \na.*,\ncase  when fl_flujo= 'sale' then fl_campania_n_1 else 0 end as fl_flujo_salida\nfrom sandbox_datascientist.aoc_jbr_terminales_flujo_03 a\n;","user":"jpinelli","dateUpdated":"2022-05-13T15:07:57-0300","config":{"tableHide":true,"editorSetting":{"editOnDblClick":false,"language":"sql"},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":true,"title":true,"results":{},"enabled":false,"fontSize":9},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"}]},"apps":[],"jobName":"paragraph_1652465276963_-1755030305","id":"20211013-164042_2039487572","dateCreated":"2022-05-13T15:07:56-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:58"},{"text":"%jdbc\n","user":"jpinelli","dateUpdated":"2022-09-06T13:46:31-0300","config":{"colWidth":12,"fontSize":9,"enabled":true,"results":{},"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"editorMode":"ace/mode/sql"},"settings":{"params":{},"forms":{}},"apps":[],"jobName":"paragraph_1662482791268_-470049151","id":"20220906-134631_1955362009","dateCreated":"2022-09-06T13:46:31-0300","status":"READY","progressUpdateIntervalMs":500,"$$hashKey":"object:59"}],"name":"JPinelli/TERMINALES/Term/8-Flujo_campanias 1","id":"2H3ECVZSV","noteParams":{},"noteForms":{},"angularObjects":{"angular:shared_process":[],"jdbc:shared_process":[],"sh:jpinelli:":[]},"config":{"isZeppelinNotebookCronEnable":false,"looknfeel":"default","personalizedMode":"false"},"info":{}}
+{
+  "paragraphs": [
+    {
+      "title": "Nueva versión - nov 21",
+      "text": "%jdbc(hive)\n\ndrop table sandbox_datascientist.jfp_terminales_flujo_01;\ncreate table sandbox_datascientist.jfp_terminales_flujo_01 stored as orc as\nselect \na.*,\ncase \n-- when a.fl_terminal='Sin Usim' and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' then 'CASIM'\nwhen substring(c1.imsi,8,1) <> '9' and d1.banda_general_tx='LTE Compatible' and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' then 'CASIM'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='actualizable' and a.fl_apple=0 then 'Actualizacion_Android'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='actualizable' and a.fl_apple=1 then 'Actualizacion_Apple'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='Obsoleto' and a.fl_apple=1 then 'CATER_APPLE'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and (a.fl_total_so='Obsoleto' and a.fl_apple=0) then 'CATER_ANDROID'\nwhen a.ani=c.ani then 'Mal configurado'\nend as FL_CAMPANIA\nfrom sandbox.jg_tablero_terminales a\n--------------------Modificacion 6/4/22-----------------------------------------------\n\n-- inner join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\ninner join ACCESS_DATA.AT_Parque_M b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes \nleft join sandbox_datascientist.jfp_imsis_trafico_01 c1 on a.ani=substring(c1.ani,3,10)\nleft join access_data.at_tacs_gsma_m d1 on a.tac_nr=d1.tac_nr and d1.periodo_nr=date_format(add_months(current_date,-1),'yyyyMM') ---------------------------------------Cambiar periodo fecha \n----------------------------------------------------------------------------------------\n-- left join (select mes, ani, count(*) from sandbox.jg_terminales_mal_config where mes >= 202109 group by mes, ani) c on a.ani = c.ani and a.mes =c.mes\nleft join (select mes, ani, count(*) from sandbox.jg_terminales_mal_config where mes >= cast(date_format(add_months(current_date,-6),'yyyyMM') as int) group by mes, ani) c on a.ani = c.ani and a.mes =c.mes                                                                                                                                     ------------MODIF JB 13/10/22\n-- where a.mes>=202109\nwhere a.mes>=cast(date_format(add_months(current_date,-6),'yyyyMM') as int)                                                                         ------------MODIF JB 13/10/22\nand b.Suscripcion_CD NOT LIKE 'K%'\nand b.Linea_Negocio_CD = 'WRLS'\n;\n\ndrop table sandbox_datascientist.jfp_terminales_flujo_02;\ncreate table sandbox_datascientist.jfp_terminales_flujo_02 stored as orc as\nselect \na.*,\nnvl(b.FL_CAMPANIA, c.FL_CAMPANIA) as fl_campania_n_1\nfrom sandbox_datascientist.jfp_terminales_flujo_01 a \nleft join sandbox_datascientist.jfp_terminales_flujo_01 b on a.ani=b.ani and a.mes=b.mes+1\nleft join sandbox_datascientist.jfp_terminales_flujo_01 c on a.ani=c.ani and a.mes=c.mes+89\n-- where a.mes>=202109\nwhere a.mes>=cast(date_format(add_months(current_date,-6),'yyyyMM') as int)\n;\n\n\ndrop table sandbox_datascientist.jfp_terminales_flujo_03;\ncreate table sandbox_datascientist.jfp_terminales_flujo_03 stored as orc as\nselect \na.*,\ncase \nwhen fl_campania_n_1 is null and FL_CAMPANIA is not null then 'ingresa'\nwhen fl_campania_n_1 is not null and FL_CAMPANIA is not null then 'mantiene'\nwhen fl_campania_n_1 is not null and FL_CAMPANIA is null then 'sale'\nend as fl_flujo\nfrom sandbox_datascientist.jfp_terminales_flujo_02 a\n;\n\ndrop table sandbox_datascientist.jfp_terminales_flujo_04;\ncreate table sandbox_datascientist.jfp_terminales_flujo_04 stored as orc as\nselect \na.*,\ncase  when fl_flujo= 'sale' then fl_campania_n_1 \n    when fl_flujo in ('ingresa','mantiene') then fl_campania\n    else 0 end as fl_camp_compl\nfrom sandbox_datascientist.jfp_terminales_flujo_03 a\n;",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-11T11:02:29-0300",
+      "config": {
+        "editorSetting": {
+          "editOnDblClick": false,
+          "language": "sql",
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "fontSize": 9,
+        "title": true,
+        "results": {},
+        "enabled": true,
+        "editorHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 113798660"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 113808345"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 113808345"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 113808345"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465276745_770245174",
+      "id": "20211022-101315_333063919",
+      "dateCreated": "2022-05-13T15:07:56-0300",
+      "dateStarted": "2024-01-11T19:09:23-0300",
+      "dateFinished": "2024-01-11T19:46:53-0300",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500,
+      "focus": true,
+      "$$hashKey": "object:54"
+    },
+    {
+      "title": "Salida",
+      "text": "%jdbc(hive)\n\nselect \na.mes\t,\ncase \nwhen a.tipo_cliente_de like '%Individuo%' then 'Individuo' \nwhen a.tipo_cliente_de not like '%Individuo%' then Tipo_Organizacion_DE\nelse 'N/A'\nend as sub_segmento,\ncase when a.producto like '%Prepago%' then 1 else 0 end as fl_prepago\t,\na.fl_campania\t,\na.fl_flujo\t,\na.fl_camp_compl\t,\ncase when a.fl_region = 'AMBA' then 'AMBA'\nwhen a.fl_region like 'INT%' then 'INT'\nelse 'No informado' end as Region,\nb.m2m_fl,\ncase when b.score_crediticio_nr between 0 and 99 then 1 else 0 end fl_score_cred,\ncount(1) as q\nfrom  sandbox_datascientist.jfp_terminales_flujo_04 a\n\n--------------------Modificacion 6/4/22-----------------------------------------------\n\n-- inner join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\nleft join ACCESS_DATA.AT_Parque_M b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes \nwhere b.Suscripcion_CD NOT LIKE 'K%'\nand b.Linea_Negocio_CD = 'WRLS'\nand a.mes=date_format(add_months(current_date,-1),'yyyyMM')\n----------------------------------------------------------------------------------------\ngroup by \na.mes\t,\ncase \nwhen a.tipo_cliente_de like '%Individuo%' then 'Individuo' \nwhen a.tipo_cliente_de not like '%Individuo%' then Tipo_Organizacion_DE\nelse 'N/A'\nend,\ncase when a.producto like '%Prepago%' then 1 else 0 end \t,\ncase when a.fl_region = 'AMBA' then 'AMBA'\nwhen a.fl_region like 'INT%' then 'INT'\nelse 'No informado' end,\na.fl_campania\t,\na.fl_flujo\t,\na.fl_camp_compl ,\na.fl_region,\nm2m_fl,\ncase when b.score_crediticio_nr between 75 and 99 then 1 else 0 end\n;",
+      "user": "jpinelli",
+      "dateUpdated": "2022-09-20T15:10:04-0300",
+      "config": {
+        "tableHide": false,
+        "editorSetting": {
+          "editOnDblClick": false,
+          "language": "sql",
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "fontSize": 9,
+        "title": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "table",
+              "height": 300,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {
+                    "columns": [
+                      {
+                        "name": "a.mes",
+                        "visible": true,
+                        "width": "*",
+                        "sort": {},
+                        "filters": [
+                          {}
+                        ],
+                        "pinned": ""
+                      },
+                      {
+                        "name": "sub_segmento",
+                        "visible": true,
+                        "width": "*",
+                        "sort": {},
+                        "filters": [
+                          {}
+                        ],
+                        "pinned": ""
+                      },
+                      {
+                        "name": "fl_prepago",
+                        "visible": true,
+                        "width": "*",
+                        "sort": {},
+                        "filters": [
+                          {}
+                        ],
+                        "pinned": ""
+                      },
+                      {
+                        "name": "a.fl_campania",
+                        "visible": true,
+                        "width": "*",
+                        "sort": {
+                          "priority": 0,
+                          "direction": "desc"
+                        },
+                        "filters": [
+                          {}
+                        ],
+                        "pinned": ""
+                      },
+                      {
+                        "name": "a.fl_flujo",
+                        "visible": true,
+                        "width": "*",
+                        "sort": {},
+                        "filters": [
+                          {}
+                        ],
+                        "pinned": ""
+                      },
+                      {
+                        "name": "a.fl_camp_compl",
+                        "visible": true,
+                        "width": "*",
+                        "sort": {},
+                        "filters": [
+                          {}
+                        ],
+                        "pinned": ""
+                      },
+                      {
+                        "name": "region",
+                        "visible": true,
+                        "width": "*",
+                        "sort": {},
+                        "filters": [
+                          {}
+                        ],
+                        "pinned": ""
+                      },
+                      {
+                        "name": "b.m2m_fl",
+                        "visible": true,
+                        "width": "*",
+                        "sort": {},
+                        "filters": [
+                          {}
+                        ],
+                        "pinned": ""
+                      },
+                      {
+                        "name": "q",
+                        "visible": true,
+                        "width": "*",
+                        "sort": {},
+                        "filters": [
+                          {}
+                        ],
+                        "pinned": ""
+                      }
+                    ],
+                    "scrollFocus": {},
+                    "selection": [],
+                    "grouping": {
+                      "grouping": [],
+                      "aggregations": [],
+                      "rowExpandedStates": {}
+                    },
+                    "treeView": {},
+                    "pagination": {
+                      "paginationCurrentPage": 1,
+                      "paginationPageSize": 250
+                    }
+                  },
+                  "tableColumnTypeState": {
+                    "names": {
+                      "a.mes": "string",
+                      "sub_segmento": "string",
+                      "fl_prepago": "string",
+                      "a.fl_campania": "string",
+                      "a.fl_flujo": "string",
+                      "a.fl_camp_compl": "string",
+                      "region": "string",
+                      "b.m2m_fl": "string",
+                      "q": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                }
+              },
+              "commonSetting": {}
+            }
+          }
+        },
+        "enabled": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TABLE",
+            "data": "a.mes\tsub_segmento\tfl_prepago\ta.fl_campania\ta.fl_flujo\ta.fl_camp_compl\tregion\tb.m2m_fl\tq\n202203\tEmpresas\t0\tnull\tsale\tCATER_ANDROID\tINT\t0\t175\n202203\tIndividuo\t0\tnull\tnull\t0\tINT\t0\t1692910\n202203\tIndividuo\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t18600\n202203\tIndividuo\t1\tActualizacion_Apple\tingresa\tActualizacion_Apple\tAMBA\t0\t3930\n202203\tIndividuo\t1\tMal configurado\tmantiene\tMal configurado\tAMBA\t0\t30222\n202203\tMayoristas\t0\tMal configurado\tmantiene\tMal configurado\tINT\t0\t28\n202203\tNegocios Premium\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tAMBA\t0\t1657\n202203\tNegocios Top\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t2899\n202203\tNegocios Top\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t936\n202203\tEmpresas\t0\tnull\tsale\tActualizacion_Apple\tINT\t0\t43\n202203\tEmpresas\t0\tnull\tsale\tMal configurado\tINT\t0\t128\n202203\tIndividuo\t0\tCASIM\tmantiene\tCASIM\tAMBA\t0\t20615\n202203\tIndividuo\t0\tnull\tsale\tCATER_ANDROID\tINT\tnull\t1\n202203\tIndividuo\t1\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\t0\t4704\n202203\tIndividuo\t1\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tINT\t0\t1083\n202203\tMayoristas\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t105\n202203\tNegocio Emprendedor\t0\tnull\tsale\tMal configurado\tAMBA\t0\t395\n202203\tNegocios Top\t0\tCASIM\tingresa\tCASIM\tAMBA\t1\t8\n202203\tIndividuo\t1\tCATER_APPLE\tingresa\tCATER_APPLE\tAMBA\t0\t691\n202203\tIndividuo\t1\tnull\tsale\tActualizacion_Apple\tINT\t0\t694\n202203\tIndividuo\t1\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t13411\n202203\tNegocio Emprendedor\t1\tnull\tnull\t0\tAMBA\t0\t7\n202203\tNegocios Top\t0\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tAMBA\t0\t756\n202203\tNegocios Top\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tAMBA\t1\t5\n202203\tEmpresas\t0\tnull\tsale\tMal configurado\tAMBA\t1\t2\n202203\tIndividuo\t1\tCATER_APPLE\tmantiene\tCATER_APPLE\tAMBA\t0\t1848\n202203\tMayoristas\t0\tnull\tsale\tActualizacion_Android\tAMBA\t0\t6\n202203\tNegocio Emprendedor\t0\tnull\tsale\tMal configurado\tINT\t0\t308\n202203\tNegocios Premium\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tAMBA\t0\t145\n202203\tNegocios Top\t0\tnull\tsale\tActualizacion_Android\tINT\t1\t1\n202203\tNegocios Top\t0\tnull\tsale\tCATER_APPLE\tINT\t0\t3\n202203\tEmpresas\t0\tMal configurado\tmantiene\tMal configurado\tINT\t0\t270\n202203\tMayoristas\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\t0\t6\n202203\tNegocio Emprendedor\t0\tnull\tsale\tActualizacion_Android\tINT\t0\t431\n202203\tNegocios Premium\t0\tnull\tsale\tActualizacion_Android\tAMBA\t0\t253\n202203\tNegocios Premium\t0\tCASIM\tmantiene\tCASIM\tINT\t0\t328\n202203\tNegocios Premium\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tINT\t0\t14\n202203\tNegocios Top\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t0\t933\n202203\tEmpresas\t0\tMal configurado\tingresa\tMal configurado\tAMBA\t1\t6\n202203\tEmpresas\t0\tMal configurado\tingresa\tMal configurado\tINT\t1\t1\n202203\tIndividuo\t1\tnull\tsale\tCASIM\tAMBA\t0\t968\n202203\tIndividuo\t1\tCASIM\tingresa\tCASIM\tINT\t0\t2305\n202203\tMayoristas\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tAMBA\t0\t37\n202203\tMayoristas\t0\tnull\tsale\tMal configurado\tINT\t0\t8\n202203\tNegocios Premium\t0\tMal configurado\tingresa\tMal configurado\tAMBA\t0\t225\n202203\tNegocios Premium\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t0\t99\n202203\tNegocios Premium\t0\tMal configurado\tingresa\tMal configurado\tINT\t0\t56\n202203\tEmpresas\t0\tMal configurado\tingresa\tMal configurado\tAMBA\t0\t286\n202203\tIndividuo\t0\tnull\tnull\t0\tAMBA\t1\t1\n202203\tIndividuo\t1\tMal configurado\tmantiene\tMal configurado\tINT\t0\t21349\n202203\tMayoristas\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tAMBA\t0\t8\n202203\tNegocio Emprendedor\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t1\t9\n202203\tNegocios Premium\t1\tnull\tnull\t0\tINT\t0\t1\n202203\tNegocios Top\t0\tnull\tsale\tCATER_ANDROID\tINT\t1\t3\n202203\tNegocios Top\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tINT\t0\t65\n202203\tNegocio Emprendedor\t0\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tINT\t0\t247\n202203\tNegocios Top\t0\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tINT\t0\t629\n202203\tEmpresas\t0\tnull\tsale\tCATER_APPLE\tINT\t0\t4\n202203\tIndividuo\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t0\t2827\n202203\tIndividuo\t0\tCATER_APPLE\tingresa\tCATER_APPLE\tINT\t0\t168\n202203\tIndividuo\t1\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\tnull\t1\n202203\tNegocio Emprendedor\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t728\n202203\tNegocios Premium\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t0\t366\n202203\tNegocios Top\t0\tnull\tsale\tCASIM\tINT\t1\t10\n202203\tEmpresas\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tAMBA\t0\t303\n202203\tIndividuo\t0\tnull\tsale\tActualizacion_Android\tAMBA\t0\t12001\n202203\tIndividuo\t0\tMal configurado\tmantiene\tMal configurado\tINT\t0\t6752\n202203\tIndividuo\t1\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tINT\t0\t4725\n202203\tMayoristas\t0\tCASIM\tmantiene\tCASIM\tINT\t0\t1\n202203\tNegocio Emprendedor\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tAMBA\t1\t1\n202203\tNegocio Emprendedor\t0\tCASIM\tingresa\tCASIM\tINT\t0\t46\n202203\tNegocios Premium\t0\tnull\tsale\tCATER_APPLE\tAMBA\t0\t24\n202203\tEmpresas\t0\tnull\tnull\t0\tAMBA\t1\t2928\n202203\tIndividuo\t1\tnull\tnull\t0\tINT\t0\t344065\n202203\tMayoristas\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t25\n202203\tNegocio Emprendedor\t0\tCASIM\tmantiene\tCASIM\tAMBA\t0\t1455\n202203\tNegocios Premium\t0\tCASIM\tingresa\tCASIM\tINT\t1\t1\n202203\tNegocios Premium\t1\tnull\tnull\t0\tINT\t0\t1\n202203\tIndividuo\t0\tCASIM\tingresa\tCASIM\tAMBA\t0\t508\n202203\tIndividuo\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\t0\t4953\n202203\tNegocio Emprendedor\t0\tnull\tsale\tCATER_APPLE\tINT\t0\t21\n202203\tNegocios Premium\t0\tnull\tsale\tCASIM\tAMBA\t0\t11\n202203\tNegocios Premium\t0\tCASIM\tingresa\tCASIM\tINT\t0\t54\n202203\tNegocios Top\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t413\n202203\tIndividuo\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tAMBA\t0\t2051\n202203\tNegocio Emprendedor\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t0\t160\n202203\tNegocios Premium\t0\tnull\tnull\t0\tINT\t0\t50381\n202203\tNegocios Premium\t0\tnull\tsale\tMal configurado\tINT\t1\t2\n202203\tNegocios Premium\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t123\n202203\tNegocios Top\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\t0\t230\n202203\tEmpresas\t0\tnull\tsale\tCATER_APPLE\tAMBA\t0\t11\n202203\tEmpresas\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\t0\t59\n202203\tEmpresas\t0\tCASIM\tmantiene\tCASIM\tINT\t0\t406\n202203\tMayoristas\t0\tCASIM\tingresa\tCASIM\tINT\t0\t1\n202203\tMayoristas\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t1\n202203\tNegocios Premium\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tAMBA\t0\t147\n202203\tEmpresas\t0\tMal configurado\tmantiene\tMal configurado\tINT\t1\t2\n202203\tIndividuo\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t5689\n202203\tIndividuo\t1\tActualizacion_Android\tmantiene\tActualizacion_Android\tAMBA\tnull\t1\n202203\tIndividuo\t1\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t47721\n202203\tIndividuo\t1\tActualizacion_Apple\tingresa\tActualizacion_Apple\tINT\t0\t1607\n202203\tIndividuo\t1\tCATER_APPLE\tmantiene\tCATER_APPLE\tINT\t0\t171\n202203\tNegocio Emprendedor\t0\tCASIM\tmantiene\tCASIM\tINT\t0\t308\n202203\tNegocios Premium\t0\tCASIM\tingresa\tCASIM\tAMBA\t0\t44\n202203\tNegocios Top\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tAMBA\t0\t84\n202203\tNegocios Top\t1\tnull\tnull\t0\tINT\t0\t3\n202203\tEmpresas\t0\tnull\tsale\tActualizacion_Android\tINT\t0\t203\n202203\tEmpresas\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t0\t172\n202203\tNegocios Premium\t0\tnull\tsale\tActualizacion_Apple\tINT\t0\t217\n202203\tNegocios Premium\t0\tnull\tsale\tMal configurado\tINT\t0\t49\n202203\tNegocios Premium\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\t0\t118\n202203\tNegocios Top\t0\tnull\tsale\tCASIM\tAMBA\t0\t15\n202203\tNegocio Emprendedor\t0\tCASIM\tingresa\tCASIM\tAMBA\t1\t2\n202203\tNegocio Emprendedor\t1\tMal configurado\tmantiene\tMal configurado\tAMBA\t0\t1\n202203\tNegocios Top\t0\tCATER_APPLE\tingresa\tCATER_APPLE\tAMBA\t0\t30\n202203\tNegocios Top\t0\tnull\tsale\tCASIM\tINT\t1\t2\n202203\tNegocios Top\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t1\t14094\n202203\tIndividuo\t0\tCASIM\tingresa\tCASIM\tINT\t0\t608\n202203\tNegocios Top\t0\tnull\tsale\tMal configurado\tINT\t0\t112\n202203\tIndividuo\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t17726\n202203\tIndividuo\t0\tActualizacion_Apple\tingresa\tActualizacion_Apple\tINT\t0\t2239\n202203\tIndividuo\t1\tCATER_APPLE\tingresa\tCATER_APPLE\tINT\t0\t240\n202203\tNegocio Emprendedor\t0\tnull\tsale\tCATER_ANDROID\tINT\t0\t282\n202203\tNegocios Premium\t0\tCASIM\tmantiene\tCASIM\tINT\t1\t1\n202203\tNegocios Top\t0\tMal configurado\tingresa\tMal configurado\tAMBA\t0\t355\n202203\tNegocios Top\t0\tCASIM\tmantiene\tCASIM\tINT\t0\t388\n202203\tIndividuo\t1\tActualizacion_Android\tmantiene\tActualizacion_Android\tAMBA\t0\t75243\n202203\tIndividuo\t1\tCASIM\tmantiene\tCASIM\tAMBA\t0\t27024\n202203\tIndividuo\t1\tCATER_ANDROID\tingresa\tCATER_ANDROID\tAMBA\t0\t30566\n202203\tIndividuo\t1\tnull\tsale\tActualizacion_Android\tINT\t0\t2708\n202203\tMayoristas\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tAMBA\t0\t4\n202203\tMayoristas\t0\tActualizacion_Apple\tingresa\tActualizacion_Apple\tINT\t0\t2\n202203\tNegocios Premium\t0\tCASIM\tmantiene\tCASIM\tAMBA\t0\t1445\n202203\tNegocios Top\t0\tnull\tsale\tCATER_ANDROID\tAMBA\t0\t372\n202203\tNegocios Top\t0\tnull\tsale\tCATER_APPLE\tINT\t0\t21\n202203\tNegocio Emprendedor\t0\tCATER_APPLE\tingresa\tCATER_APPLE\tAMBA\t0\t59\n202203\tNegocio Emprendedor\t0\tMal configurado\tmantiene\tMal configurado\tINT\t0\t1526\n202203\tNegocios Top\t0\tnull\tsale\tActualizacion_Apple\tAMBA\t0\t355\n202203\tNegocios Top\t0\tCASIM\tmantiene\tCASIM\tAMBA\t1\t44\n202203\tNegocios Top\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tINT\t1\t1\n202203\tMayoristas\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t4\n202203\tNegocio Emprendedor\t0\tnull\tnull\t0\tAMBA\t1\t227\n202203\tNegocio Emprendedor\t0\tnull\tnull\t0\tINT\t0\t24990\n202203\tNegocios Top\t0\tnull\tsale\tCASIM\tINT\t0\t16\n202203\tNegocios Top\t0\tnull\tsale\tCATER_ANDROID\tINT\t0\t425\n202203\tNegocios Top\t0\tCASIM\tmantiene\tCASIM\tINT\t1\t52\n202203\tIndividuo\t1\tnull\tnull\t0\tAMBA\tnull\t14\n202203\tNegocio Emprendedor\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tINT\t0\t22\n202203\tNegocio Emprendedor\t0\tMal configurado\tingresa\tMal configurado\tINT\t0\t87\n202203\tNegocio Emprendedor\t0\tMal configurado\tmantiene\tMal configurado\tINT\t0\t364\n202203\tNegocios Top\t0\tnull\tnull\t0\tAMBA\t0\t114612\n202203\tEmpresas\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tAMBA\t1\t6474\n202203\tNegocios Premium\t0\tCASIM\tmantiene\tCASIM\tAMBA\t1\t2\n202203\tNegocios Top\t0\tnull\tsale\tMal configurado\tINT\t1\t5\n202203\tEmpresas\t0\tCASIM\tingresa\tCASIM\tINT\t0\t30\n202203\tIndividuo\t0\tnull\tnull\t0\tINT\t0\t418654\n202203\tIndividuo\t1\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\tnull\t2\n202203\tIndividuo\t1\tCASIM\tingresa\tCASIM\tINT\t0\t840\n202203\tMayoristas\t0\tCASIM\tmantiene\tCASIM\tINT\t0\t131\n202203\tNegocio Emprendedor\t0\tCASIM\tmantiene\tCASIM\tINT\t1\t5\n202203\tNegocios Premium\t0\tnull\tsale\tMal configurado\tAMBA\t0\t185\n202203\tNegocios Premium\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tAMBA\t1\t582\n202203\tNegocios Top\t0\tnull\tnull\t0\tAMBA\t1\t3219\n202203\tNegocios Top\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t716\n202203\tIndividuo\t0\tnull\tsale\tCASIM\tINT\t0\t88\n202203\tIndividuo\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tINT\t0\t814\n202203\tIndividuo\t1\tnull\tsale\tCATER_ANDROID\tINT\t0\t23578\n202203\tIndividuo\t1\tMal configurado\tmantiene\tMal configurado\tINT\tnull\t1\n202203\tMayoristas\t0\tnull\tnull\t0\tAMBA\t0\t1347\n202203\tEmpresas\t0\tnull\tsale\tCATER_ANDROID\tAMBA\t0\t354\n202203\tIndividuo\t0\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tINT\t0\t8972\n202203\tIndividuo\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tAMBA\t0\t7731\n202203\tMayoristas\t0\tnull\tsale\tActualizacion_Apple\tINT\t0\t2\n202203\tNegocio Emprendedor\t0\tnull\tsale\tActualizacion_Android\tAMBA\t0\t558\n202203\tNegocio Emprendedor\t0\tnull\tnull\t0\tINT\t0\t94480\n202203\tNegocio Emprendedor\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t1\t1336\n202203\tNegocios Premium\t0\tnull\tsale\tActualizacion_Android\tINT\t0\t68\n202203\tNegocios Top\t0\tnull\tsale\tCASIM\tINT\t0\t2\n202203\tIndividuo\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tAMBA\t0\t11781\n202203\tNegocios Top\t0\tCATER_ANDROID\tmantiene\tCATER_ANDROID\tINT\t1\t11\n202203\tMayoristas\t0\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tAMBA\t0\t6\n202203\tMayoristas\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tAMBA\t0\t1\n202203\tMayoristas\t0\tCATER_ANDROID\tingresa\tCATER_ANDROID\tINT\t0\t30\n202203\tNegocio Emprendedor\t0\tCASIM\tingresa\tCASIM\tINT\t0\t11\n202203\tNegocios Premium\t0\tMal configurado\tmantiene\tMal configurado\tAMBA\t0\t751\n202203\tEmpresas\t0\tCATER_APPLE\tmantiene\tCATER_APPLE\tINT\t0\t5\n202203\tIndividuo\t0\tCASIM\tingresa\tCASIM\tINT\t0\t88\n202203\tMayoristas\t0\tMal configurado\tmantiene\tMal configurado\tAMBA\t0\t11\n202203\tNegocio Emprendedor\t0\tMal configurado\tingresa\tMal configurado\tAMBA\t0\t407\n202203\tNegocios Premium\t0\tCASIM\tingresa\tCASIM\tINT\t0\t14\n202203\tNegocios Top\t1\tnull\tnull\t0\tAMBA\t0\t3\n202203\tEmpresas\t0\tnull\tnull\t0\tINT\t0\t42696\n202203\tNegocio Emprendedor\t0\tActualizacion_Apple\tmantiene\tActualizacion_Apple\tAMBA\t0\t2393\n202203\tNegocio Emprendedor\t0\tCASIM\tingresa\tCASIM\tAMBA\t0\t39\n202203\tNegocio Emprendedor\t1\tCASIM\tmantiene\tCASIM\tINT\t0\t1\n202203\tNegocios Premium\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tINT\t0\t1688\n202203\tNegocios Top\t0\tActualizacion_Android\tmantiene\tActualizacion_Android\tAMBA\t0\t2293\n202203\tNegocio Emprendedor\t0\tCASIM\tmantiene\tCASIM\tAMBA\t1\t37\n202203\tNegocios Top\t0\tActualizacion_Android\tingresa\tActualizacion_Android\tAMBA\t0\t211\n202203\tEmpresas\t0\tnull\tsale\tActualizacion_Android\tINT\t0\t92\n"
+          },
+          {
+            "type": "HTML",
+            "data": "<div class=\"result-alert alert-warning\" role=\"alert\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button><strong>Output is truncated</strong> to 200 rows. Learn more about <strong>common.max_count</strong></div>"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465276801_1852701484",
+      "id": "20211013-164318_1015117672",
+      "dateCreated": "2022-05-13T15:07:56-0300",
+      "dateStarted": "2022-05-13T18:34:01-0300",
+      "dateFinished": "2022-05-13T18:34:44-0300",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:55"
+    },
+    {
+      "title": "Salida Mal Configurados (DESUSO)",
+      "text": "%jdbc(hive)\n\nselect \na.mes\t,\ncase \nwhen a.tipo_cliente_de like '%Individuo%' then 'Individuo' \nwhen a.tipo_cliente_de not like '%Individuo%' then Tipo_Organizacion_DE\nelse 'N/A'\nend as sub_segmento,\ncase when a.producto like '%Prepago%' then 1 else 0 end as fl_prepago\t,\na.fl_campania\t,\na.fl_flujo\t,\ncount(1) as q\nfrom  sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_03 a\nleft join  SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b  on a.ani=b.valor_recurso_primario_cd and a.mes=b.periodo_nr\ngroup by \na.mes\t,\ncase \nwhen a.tipo_cliente_de like '%Individuo%' then 'Individuo' \nwhen a.tipo_cliente_de not like '%Individuo%' then Tipo_Organizacion_DE\nelse 'N/A'\nend,\ncase when a.producto like '%Prepago%' then 1 else 0 end \t,\na.fl_campania\t,\na.fl_flujo\n;",
+      "user": "jpinelli",
+      "dateUpdated": "2022-05-13T15:07:56-0300",
+      "config": {
+        "tableHide": true,
+        "editorSetting": {
+          "editOnDblClick": false,
+          "language": "sql"
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": true,
+        "fontSize": 9,
+        "title": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "table",
+              "height": 300,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {},
+                  "tableColumnTypeState": {
+                    "names": {
+                      "a.mes": "string",
+                      "sub_segmento": "string",
+                      "fl_prepago": "string",
+                      "a.fl_campania": "string",
+                      "a.fl_flujo": "string",
+                      "q": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                }
+              },
+              "commonSetting": {}
+            }
+          }
+        },
+        "enabled": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TABLE",
+            "data": "a.mes\tsub_segmento\tfl_prepago\ta.fl_campania\ta.fl_flujo\tq\n202110\tMayoristas\t0\t0\tsale\t12\n202108\tIndividuo\t0\t0\tnull\t4829728\n202109\tNegocio Emprendedor\t0\t0\tnull\t286002\n202107\tIndividuo\t0\t0\tnull\t4796949\n202109\tNegocios Premium\t0\t1\tingresa\t441\n202108\tnull\t0\t0\tnull\t74612\n202110\tnull\t0\t0\tnull\t34543\n202109\tIndividuo\t1\t0\tnull\t3876613\n202108\tNegocios Premium\t0\t0\tnull\t163602\n202109\tIndividuo\t0\t0\tnull\t4860988\n202108\tNo Informado\t1\t0\tnull\t1\n202109\tIndividuo\t1\t0\tsale\t21553\n202110\tNegocio Emprendedor\t1\t0\tnull\t15\n202108\tNegocios Premium\t0\t0\tsale\t606\n202111\tMayoristas\t0\t0\tnull\t4830\n202109\tEmpresas\t0\t0\tnull\t232986\n202109\tMayoristas\t0\t0\tsale\t8\n202108\tMayoristas\t0\t1\tingresa\t15\n202107\tNegocio Emprendedor\t0\t1\tingresa\t4937\n202108\tEmpresas\t0\t1\tmantiene\t2123\n202110\tNegocio Emprendedor\t0\t1\tmantiene\t3536\n202109\tMayoristas\t0\t0\tnull\t5124\n202110\tNegocio Emprendedor\t0\t0\tsale\t869\n202109\tIndividuo\t1\t1\tmantiene\t61346\n202110\tNo Informado\t1\t0\tnull\t1\n202111\tMayoristas\t0\t1\tmantiene\t37\n202107\tNegocio Emprendedor\t0\t0\tnull\t282488\n202109\tNegocios Premium\t0\t0\tsale\t435\n202111\tIndividuo\t0\t0\tnull\t4905096\n202108\tNegocios Top\t1\t0\tnull\t4\n202109\tMayoristas\t0\t1\tingresa\t10\n202109\tNo Informado\t0\t0\tnull\t2\n202110\tEmpresas\t0\t0\tsale\t478\n202110\tNegocios Top\t1\t0\tnull\t3\n202110\tMayoristas\t0\t1\tmantiene\t38\n202111\tNegocio Emprendedor\t0\t1\tingresa\t869\n202108\tIndividuo\t1\t0\tsale\t27590\n202108\tNegocio Emprendedor\t0\t0\tnull\t284829\n202108\tIndividuo\t0\t1\tmantiene\t77700\n202110\tIndividuo\t1\t1\tmantiene\t60964\n202107\tNegocios Top\t0\t0\tnull\t300144\n202111\tNegocio Emprendedor\t1\t0\tnull\t16\n202107\tNegocios Premium\t0\t1\tingresa\t2738\n202110\tMayoristas\t0\t0\tnull\t4866\n202110\tNegocios Premium\t0\t1\tingresa\t375\n202111\tNegocios Premium\t0\t0\tnull\t162541\n202109\tEmpresas\t0\t1\tingresa\t495\n202107\tEmpresas\t0\t0\tnull\t219672\n202108\tIndividuo\t0\t0\tsale\t21546\n202109\tnull\t0\t0\tnull\t1\n202107\tNegocios Top\t1\t0\tnull\t8\n202109\tNegocio Emprendedor\t0\t1\tingresa\t865\n202111\tNegocios Top\t0\t0\tsale\t694\n202110\tIndividuo\t1\t0\tnull\t3879187\n202111\tIndividuo\t1\t0\tsale\t20963\n202107\tIndividuo\t1\t0\tnull\t3840679\n202108\tEmpresas\t0\t1\tingresa\t567\n202109\tNegocios Top\t1\t0\tnull\t3\n202108\tNegocios Premium\t0\t1\tmantiene\t2106\n202110\tNegocio Emprendedor\t0\t0\tnull\t289566\n202110\tNegocios Premium\t0\t0\tsale\t463\n202111\tIndividuo\t1\t1\tingresa\t31477\n202111\tNegocios Premium\t0\t1\tingresa\t490\n202110\tNegocios Top\t0\t1\tmantiene\t3258\n202110\tNegocios Premium\t0\t0\tnull\t163332\n202108\tNegocios Top\t0\t0\tnull\t298827\n202109\tNegocios Top\t0\t0\tnull\t300862\n202110\tIndividuo\t0\t0\tnull\t4886681\n202108\tMayoristas\t0\t0\tnull\t5093\n202111\tNegocio Emprendedor\t0\t1\tmantiene\t3454\n202111\tnull\t0\t0\tnull\t33645\n202108\tIndividuo\t0\t1\tingresa\t18537\n202108\tNegocio Emprendedor\t0\t1\tmantiene\t3740\n202111\tEmpresas\t0\t0\tsale\t458\n202108\tNegocio Emprendedor\t1\t0\tnull\t18\n202108\tMayoristas\t0\t1\tmantiene\t40\n202109\tNegocio Emprendedor\t0\t0\tsale\t803\n202107\tNo Informado\t0\t1\tingresa\t166\n202109\tNegocios Top\t0\t1\tingresa\t791\n202111\tNo Informado\t1\t0\tnull\t1\n202111\tIndividuo\t1\t0\tnull\t3882010\n202111\tNegocio Emprendedor\t1\t1\tmantiene\t1\n202107\tEmpresas\t0\t1\tingresa\t2822\n202108\tMayoristas\t0\t0\tsale\t15\n202109\tNegocios Premium\t1\t0\tnull\t10\n202109\tNegocios Top\t0\t1\tmantiene\t3443\n202107\tNo Informado\t0\t0\tnull\t17098\n202111\tNegocios Top\t0\t1\tingresa\t807\n202107\tNo Informado\t1\t0\tnull\t1\n202110\tIndividuo\t0\t1\tingresa\t17061\n202107\tIndividuo\t0\t1\tingresa\t102568\n202107\tMayoristas\t0\t0\tnull\t4921\n202111\tNegocios Top\t1\t0\tnull\t5\n202111\tMayoristas\t0\t1\tingresa\t16\n202107\tnull\t0\t0\tnull\t36989\n202110\tIndividuo\t1\t1\tingresa\t29528\n202109\tNegocio Emprendedor\t0\t1\tmantiene\t3652\n202109\tNegocios Top\t0\t0\tsale\t729\n202110\tNegocios Top\t0\t1\tingresa\t708\n202108\tIndividuo\t1\t1\tingresa\t29301\n202108\tNegocios Top\t0\t1\tingresa\t806\n202111\tIndividuo\t0\t1\tmantiene\t72539\n202109\tEmpresas\t0\t0\tsale\t481\n202110\tNegocio Emprendedor\t0\t1\tingresa\t772\n202109\tNo Informado\t1\t0\tnull\t1\n202108\tEmpresas\t0\t0\tsale\t654\n202110\tNegocios Premium\t0\t1\tmantiene\t1968\n202110\tNegocios Top\t0\t0\tsale\t821\n202111\tNegocios Premium\t0\t0\tsale\t372\n202111\tIndividuo\t1\t1\tmantiene\t60810\n202108\tNegocios Premium\t1\t0\tnull\t8\n202111\tEmpresas\t0\t0\tnull\t230177\n202108\tNegocio Emprendedor\t0\t0\tsale\t1086\n202108\tNegocios Top\t0\t0\tsale\t1057\n202109\tIndividuo\t1\t1\tingresa\t30702\n202110\tIndividuo\t1\t0\tsale\t22737\n202108\tNo Informado\t0\t0\tnull\t2\n202109\tEmpresas\t0\t1\tmantiene\t2091\n202109\tNegocios Premium\t0\t0\tnull\t162747\n202107\tMayoristas\t0\t1\tingresa\t52\n202108\tNegocios Premium\t0\t1\tingresa\t420\n202110\tNo Informado\t0\t0\tnull\t2\n202107\tNegocio Emprendedor\t1\t0\tnull\t17\n202111\tMayoristas\t0\t0\tsale\t7\n202110\tEmpresas\t0\t0\tnull\t230284\n202109\tIndividuo\t0\t1\tingresa\t18809\n202110\tMayoristas\t0\t1\tingresa\t6\n202110\tNegocios Top\t0\t0\tnull\t297719\n202111\tIndividuo\t0\t1\tingresa\t20370\n202108\tEmpresas\t0\t0\tnull\t234039\n202111\tEmpresas\t0\t1\tmantiene\t1947\n202108\tIndividuo\t1\t1\tmantiene\t62265\n202109\tMayoristas\t0\t1\tmantiene\t44\n202111\tEmpresas\t0\t1\tingresa\t535\n202111\tNegocios Top\t0\t0\tnull\t298547\n202108\tNegocio Emprendedor\t0\t1\tingresa\t883\n202111\tIndividuo\t0\t0\tsale\t15255\n202107\tNegocios Top\t0\t1\tingresa\t4679\n202107\tIndividuo\t1\t1\tingresa\t99370\n202107\tNegocios Premium\t1\t0\tnull\t4\n202109\tIndividuo\t0\t0\tsale\t16870\n202111\tNegocios Premium\t0\t1\tmantiene\t1906\n202109\tNegocio Emprendedor\t1\t0\tnull\t15\n202110\tEmpresas\t0\t1\tingresa\t498\n202110\tIndividuo\t0\t0\tsale\t17846\n202111\tNegocio Emprendedor\t0\t0\tnull\t289357\n202110\tNegocios Premium\t1\t0\tnull\t11\n202107\tNegocios Premium\t0\t0\tnull\t161616\n202110\tIndividuo\t0\t1\tmantiene\t73694\n202111\tNegocio Emprendedor\t0\t0\tsale\t698\n202108\tIndividuo\t1\t0\tnull\t3869118\n202109\tNegocios Premium\t0\t1\tmantiene\t2024\n202111\tNegocios Top\t0\t1\tmantiene\t3145\n202111\tNegocios Premium\t1\t0\tnull\t10\n202108\tNegocios Top\t0\t1\tmantiene\t3479\n202110\tEmpresas\t0\t1\tmantiene\t2012\n202109\tIndividuo\t0\t1\tmantiene\t75804\n"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465276855_2044670614",
+      "id": "20211022-100717_341017289",
+      "dateCreated": "2022-05-13T15:07:56-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:56"
+    },
+    {
+      "title": "Agregado Oct-21 - Flujo Mal Configurados (DESUSO)",
+      "text": "%jdbc(hive)\ndrop table sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_01;\ncreate table sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_01 stored as orc as\nselect \na.*,\ncase when b.ani is not null then 1 else 0 end as FL_CAMPANIA\nfrom sandbox.jg_tablero_terminales a \nleft join sandbox.jg_terminales_mal_config b\non a.ani = b.ani and a.mes = b.mes\nwhere a.mes>=202107\n;\n\ndrop table sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_02;\ncreate table sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_02 stored as orc as\nselect \na.*,\nnvl(b.FL_CAMPANIA, c.FL_CAMPANIA) as fl_campania_n_1\nfrom sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_01 a \nleft join sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_01 b on a.ani=b.ani and a.mes=b.mes+1\nleft join sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_01 c on a.ani=c.ani and a.mes=c.mes+89\n--where a.mes>=202104\n;\n\ndrop table sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_03;\ncreate table sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_03 stored as orc as\nselect \na.*,\ncase \nwhen (fl_campania_n_1 is null or fl_campania_n_1 = 0) and FL_CAMPANIA = 1 then 'ingresa'\nwhen fl_campania_n_1 = 1 and FL_CAMPANIA = 1 then 'mantiene'\nwhen fl_campania_n_1 = 1 and FL_CAMPANIA = 0 then 'sale'\nend as fl_flujo\nfrom sandbox_datascientist.aoc_jbr_terminales_malconfig_flujo_02 a\n;",
+      "user": "jpinelli",
+      "dateUpdated": "2022-05-13T15:07:56-0300",
+      "config": {
+        "tableHide": true,
+        "editorSetting": {
+          "editOnDblClick": false,
+          "language": "sql"
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": true,
+        "title": true,
+        "results": {},
+        "enabled": false,
+        "fontSize": 9
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465276911_1474838753",
+      "id": "20211022-100059_598679255",
+      "dateCreated": "2022-05-13T15:07:56-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:57"
+    },
+    {
+      "title": "Entradas, salidas y mant de camp SO, cater y casim (desuso)",
+      "text": "%jdbc(hive)\n\n-----------Version vieja (cambio en nov21)-------------\n/*drop table sandbox.jg_terminales_flujo_01;\ncreate table sandbox.jg_terminales_flujo_01 stored as orc as\nselect \na.*,\ncase \nwhen a.fl_terminal='Sin Usim' and a.tipo_cliente_de in('Individuo','Empresa') and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' then 'CASIM'\nwhen a.tipo_cliente_de in('Individuo','Empresa') and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='actualizable' and fl_apple=0 then 'Actualizacion_Android'\nwhen a.tipo_cliente_de in('Individuo','Empresa') and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='actualizable' and fl_apple=1 then 'Actualizacion_Apple'\nwhen a.tipo_cliente_de in('Individuo','Empresa') and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='Obsoleto' and fl_apple=1 then 'CATER_APPLE'\nwhen a.tipo_cliente_de in('Individuo','Empresa') and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and (a.fl_total_so='Obsoleto' and fl_apple=0) then 'CATER_ANDROID'\nend as FL_CAMPANIA\nfrom sandbox.jg_tablero_terminales a\nwhere a.mes>=202106\n;*/\n--------------------------------------------------------\n\ndrop table sandbox_datascientist.aoc_jbr_terminales_flujo_01;\ncreate table sandbox_datascientist.aoc_jbr_terminales_flujo_01 stored as orc as\nselect \na.*,\ncase \nwhen a.fl_terminal='Sin Usim' and a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' then 'CASIM'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='actualizable' and fl_apple=0 then 'Actualizacion_Android'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='actualizable' and fl_apple=1 then 'Actualizacion_Apple'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and a.fl_total_so='Obsoleto' and fl_apple=1 then 'CATER_APPLE'\nwhen a.unidad_negocio='Movil' and a.fl_navegador='NAVEGADOR' and (a.fl_total_so='Obsoleto' and fl_apple=0) then 'CATER_ANDROID'\nend as FL_CAMPANIA\nfrom sandbox.jg_tablero_terminales a\nwhere a.mes>=202106\n;\n\ndrop table sandbox_datascientist.aoc_jbr_terminales_flujo_02;\ncreate table sandbox_datascientist.aoc_jbr_terminales_flujo_02 stored as orc as\nselect \na.*,\nnvl(b.FL_CAMPANIA, c.FL_CAMPANIA) as fl_campania_n_1\nfrom sandbox_datascientist.aoc_jbr_terminales_flujo_01 a \nleft join sandbox_datascientist.aoc_jbr_terminales_flujo_01 b on a.ani=b.ani and a.mes=b.mes+1\nleft join sandbox_datascientist.aoc_jbr_terminales_flujo_01 c on a.ani=c.ani and a.mes=c.mes+89\nwhere a.mes>=202106\n;\n\n\ndrop table sandbox_datascientist.aoc_jbr_terminales_flujo_03;\ncreate table sandbox_datascientist.aoc_jbr_terminales_flujo_03 stored as orc as\nselect \na.*,\ncase \nwhen fl_campania_n_1 is null and FL_CAMPANIA is not null then 'ingresa'\nwhen fl_campania_n_1 is not null and FL_CAMPANIA is not null then 'mantiene'\nwhen fl_campania_n_1 is not null and FL_CAMPANIA is null then 'sale'\nend as fl_flujo\nfrom sandbox_datascientist.aoc_jbr_terminales_flujo_02 a\n;\n\ndrop table sandbox_datascientist.aoc_jbr_terminales_flujo_04;\ncreate table sandbox_datascientist.aoc_jbr_terminales_flujo_04 stored as orc as\nselect \na.*,\ncase  when fl_flujo= 'sale' then fl_campania_n_1 else 0 end as fl_flujo_salida\nfrom sandbox_datascientist.aoc_jbr_terminales_flujo_03 a\n;",
+      "user": "jpinelli",
+      "dateUpdated": "2022-05-13T15:07:57-0300",
+      "config": {
+        "tableHide": true,
+        "editorSetting": {
+          "editOnDblClick": false,
+          "language": "sql"
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": true,
+        "title": true,
+        "results": {},
+        "enabled": false,
+        "fontSize": 9
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465276963_-1755030305",
+      "id": "20211013-164042_2039487572",
+      "dateCreated": "2022-05-13T15:07:56-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:58"
+    },
+    {
+      "text": "%jdbc\n",
+      "user": "jpinelli",
+      "dateUpdated": "2022-09-06T13:46:31-0300",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 9,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "editorMode": "ace/mode/sql"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1662482791268_-470049151",
+      "id": "20220906-134631_1955362009",
+      "dateCreated": "2022-09-06T13:46:31-0300",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:59"
+    }
+  ],
+  "name": "JPinelli/TERMINALES/Term/8-Flujo_campanias 1",
+  "id": "2H3ECVZSV",
+  "noteParams": {},
+  "noteForms": {},
+  "angularObjects": {
+    "angular:shared_process": [],
+    "jdbc:shared_process": [],
+    "sh:jpinelli:": []
+  },
+  "config": {
+    "isZeppelinNotebookCronEnable": false,
+    "looknfeel": "default",
+    "personalizedMode": "false"
+  },
+  "info": {}
+}
