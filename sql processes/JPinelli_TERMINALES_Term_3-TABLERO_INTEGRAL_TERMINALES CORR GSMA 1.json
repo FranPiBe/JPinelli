@@ -1,1 +1,308 @@
-﻿{"paragraphs":[{"title":"PARQUE UNIFICADO --> PARTIDA","text":"%jdbc (hive)\n\ndrop table sandbox_datascientist.jfp_tablero_terminales_01;\ncreate table sandbox_datascientist.jfp_tablero_terminales_01 stored as orc as \nselect a.*\nfrom trafico.sdr_dyn_cei a\nwhere a.fecha between date_format(date_sub(current_date,day(current_date)),'yyyyMM01') and date_format(date_sub(current_date,day(current_date)),'yyyyMMdd')\n------------------------------------------------------------------------------------->>>>>> CAMBIAR FECHA\nand base_hexa_cell_id like '72207%'\nand base_msisdn is not null\n;\n\ndrop table sandbox_datascientist.jfp_tablero_terminales_02;\ncreate table sandbox_datascientist.jfp_tablero_terminales_02 stored as orc as \nselect substring (fecha,1, 6) as mes , base_msisdn as ani, avg(base_cei_score) as cei from sandbox_datascientist.jfp_tablero_terminales_01\ngroup by substring (fecha,1, 6), base_msisdn\n;\n\n\ndrop table sandbox_datascientist.jfp_tablero_terminales_03;\ncreate table sandbox_datascientist.jfp_tablero_terminales_03 \nas\nselect \na.valor_recurso_primario_cd as ani,\na.Tipo_Cliente_DE,\na.sub_region_cnc_de,\na.region_cnc_de,\na.linea_negocio_cd,\na.producto_principal_de,\n--------------------Modificacion 6/4/22-----------------------------------------------\n--a.producto_oferta_cd,\na.catalogo_producto_oferta_id as producto_oferta_cd,\n--a.producto_oferta_de,\na.oferta_de as producto_oferta_de,\n--------------------------------------------------------------------------------------\n\na.indicador_tem_cd,\na.corporacion_tx,\na.tipo_documento_cd,\na.tac_nr,\na.imei_nr,\na.imsi_nr,\na.sim_lte_fl,\n--------------------Modificacion 6/4/22-----------------------------------------------\n--a.tecnologia_equipo_tx,\ng.banda_general_tx as tecnologia_equipo_tx,\n--a.red_tx,\ncase\nwhen g.banda_general_tx = 'LTE Compatible' and SUBSTR(a.IMSI_NR,8,1) = '9' then '4G'\nwhen g.banda_general_tx = 'LTE Compatible' and SUBSTR(a.IMSI_NR,8,1) <> '9' then '3G'\nwhen g.banda_general_tx = 'LTE No Compatible' THEN '3G'\nwhen g.banda_general_tx = 'UMTS' THEN '3G'\nwhen g.banda_general_tx = 'GSM' THEN '2G'\nelse 'No Informado' end as red_tx,\nREGEXP_REPLACE(g.Fabricante_Equipo_DE, ',', '') AS marca,\n--a.recarga_negocio_n0_mo,\n--a.recarga_negocio_n1_mo,\n--a.recarga_negocio_n2_mo,\nd.recarga_negocio recarga_negocio_n0_mo,\ne.recarga_negocio recarga_negocio_n1_mo,\nf.recarga_negocio recarga_negocio_n2_mo,\n--case when a.tipo_oferta_de in ('PortePagado', 'PR_PPAL_ACTIVA', 'PR_PPAL_EXPRESS', 'Prepaid', 'PRE') and (a.recarga_negocio_n2_mo>0 or a.recarga_negocio_n1_mo>0 or a.recarga_negocio_n0_mo>0) then 1 else 0 end as parque_recargador_90,\ncase when d.suscripcion_id is not null then 1 else 0 end as parque_recargador_90,\n--------------------------------------------------------------------------------------\n\ncase when a.tipo_oferta_de in ('PR_PPAL_AHORRO', 'Control') then 'Control'\nwhen a.tipo_oferta_de in ('PR_PPAL_CONTRATO', 'Postpago') then 'Pospago'\nwhen a.tipo_oferta_de in ('PortePagado', 'PR_PPAL_ACTIVA', 'PR_PPAL_EXPRESS', 'Prepaid', 'PRE') then 'Prepago'\nend as producto,\nb.cei as Cei_Ind_Experiencia_total_NR,\nc.fl_region,\nc.fl_navegador,\nc.operador,\nc.unidad_negocio,\nc.terminal,\nc.mb_4g,\nc.mb_3g,\nc.mb_2g,\nc.mb_ni,\nc.mb_tot,\ncase when c.terminal in ('4G READY' ,'NI_4G') then '4G_READY'\n            when c.terminal ='4G SIN LTE' then 'Mala configuracion'\n            when c.terminal ='4G SIN USIM' then 'Sin Usim'\n            when c.terminal in('NO IDENTIFICADO','ROAMERS','RESTO') then 'Otros' \n            when c.terminal is null then 'Otros' else c.terminal end fl_terminal,\na.periodo_nr as mes\n--------------------Modificacion 6/4/22-----------------------------------------------\n--from SBX_PLAN_BIENVENIDA.Parque_Unificado_Movil a   -----cambiar por at_parque\nfrom ACCESS_DATA.AT_Parque_M a \n-----------------------------------------------------------------------------------------\nleft join sandbox_datascientist.jfp_tablero_terminales_02 b on a.valor_recurso_primario_cd=b.ani\nleft join ANALYTICS.off_xdr_mes_5_out_modoff c on a.valor_recurso_primario_cd=substring(c.ani, 3,10)  and a.periodo_nr=c.aniomes\n--sandbox.cnc_XDR_MES_5 c\n--URM_AR.off_xdr_mes_5_out_modoff c \n--------------------Modificacion 6/4/22-----------------------------------------------\nleft join sandbox_datascientist.jfp_bandas_no_compatibles_aux d on a.suscripcion_id=d.suscripcion_id and a.periodo_nr=d.periodo_nr\nleft join sandbox_datascientist.jfp_bandas_no_compatibles_aux e on a.suscripcion_id=e.suscripcion_id and a.periodo_nr=(e.periodo_nr+1)\nleft join sandbox_datascientist.jfp_bandas_no_compatibles_aux f on a.suscripcion_id=f.suscripcion_id and a.periodo_nr=(f.periodo_nr+2)\nleft join (select * from access_data.AT_Tacs_Gsma_M where periodo_nr = date_format(add_months(current_date,-1),'yyyyMM')) g on a.tac_nr = g.tac_nr ------------------------CAMBIAR PERIODO\n-----------------------------------------------------------------------------------------\n\nwhere \na.periodo_nr= date_format(add_months(current_date,-1),'yyyyMM') --------------------------------------------------------------------------------------------------------CAMBIAR PERIODO\nand a.estado_suscripcion_de not in ('Terminated', 'Cancelled') \nand a.Tipo_Cliente_DE not in ('No Informado')\nand a.Tipo_Oferta_DE not in ('PR_PPAL_-1', 'No Informado')\n--------------------Modificacion 6/4/22-------------------------------------------------\nand a.Suscripcion_CD NOT LIKE 'K%'\nand a.Linea_Negocio_CD = 'WRLS'\n-----------------------------------------------------------------------------------------\n;","user":"jpinelli","dateUpdated":"2024-03-28T20:36:43-0300","config":{"lineNumbers":true,"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","fontSize":9,"title":true,"results":{},"enabled":true,"editorHide":false},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 14163366"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 19370241"}]},"apps":[],"jobName":"paragraph_1652465212417_-1433655095","id":"20201027-102614_1292585501","dateCreated":"2022-05-13T15:06:52-0300","dateStarted":"2024-03-13T13:00:30-0300","dateFinished":"2024-03-13T14:00:15-0300","status":"FINISHED","progressUpdateIntervalMs":500,"focus":true,"$$hashKey":"object:54"},{"title":"Agrego 2M  terminales con bandas no compatibles y datos de SO","text":"%jdbc (hive)\ndrop table sandbox_datascientist.jfp_tablero_terminales_04;\ncreate table sandbox_datascientist.jfp_tablero_terminales_04 stored as orc as \nselect \na.*,\ncase when b.ani is not null then 1 else 0 end as fl_2M,\n--c.version_base_terminal,\n--c.version_tope_terminal,\n--c.gama,\n--c.fecha_primera_homologacion,\nc.version_final,\nc.version_num,\nc.version_mayoritaria,\n--------------------Modificacion 6/4/22-------------------------------------------------\n--c.fl_apple,\nCASE WHEN a.marca LIKE '%Apple Inc%' THEN 1 ELSE 0 end AS fl_apple,\n-----------------------------------------------------------------------------------------\nc.fl_actualizable_android,\nc.fl_cater_android,\nc.fl_actualizable_apple,\nc.fl_actualizable_apple_ultimo_update,\nc.fl_cater_apple,\nc.fl_grupo_so,\nc.fl_grupo_accion,\nd.fl_caso_de_uso,\nd.banda_02,\nd.banda_04,\nd.banda_05,\nd.banda_07,\nd.banda_08,\nd.banda_28,\nd.porc_bandas_3g,\nd.porc_bandas_4g,\nd.fl_mayoritario_bandas_3g,\nd.sitio_vive,\nd.fl_sitio_vive,\nd.fl_sitio_banda_4_vive,\nd.fl_sitio_banda_2_vive,\nd.fl_sitio_banda_7_vive,\nd.fl_sitio_banda_28_vive,\nd.fl_sitio_banda_5_vive,\nd.fl_sitio_banda_2_5_vive,\nd.sitio_trabaja,\nd.fl_sitio_trabaja,\nd.fl_sitio_banda_4_trabaja,\nd.fl_sitio_banda_2_trabaja,\nd.fl_sitio_banda_7_trabaja,\nd.fl_sitio_banda_28_trabaja,\nd.fl_sitio_banda_5_trabaja,\nfl_sitio_banda_2_5_trabaja,\nd.sitio_mayor,\nd.fl_sitio_mayor,\nd.fl_sitio_banda_4_mayor,\nd.fl_sitio_banda_2_mayor,\nd.fl_sitio_banda_7_mayor,\nd.fl_sitio_banda_28_mayor,\nd.fl_sitio_banda_5_mayor,\nd.fl_sitio_banda_2_5_mayor\nfrom sandbox_datascientist.jfp_tablero_terminales_03 a\n----\n--left join (select ani from sandbox.parque_thp where thp<=2000 and periodo = 202107)b on a.ani=b.ani --#thp sandbox DUCA\nleft join (select ani from tableros.parque_thp where thp<=2000 and periodo = date_format(add_months(current_date,-1),'yyyyMM')) b on a.ani=b.ani --#thp productiva ------------->>>>>CAMBIAR PERIODO\n\n----\nleft join Tableros.equipos_actualizables c on a.mes=c.mes_parque and a.ani=c.ani and c.fl_es_tuenti=0 --###tabla productiva \n--left join sandbox.jg_equipos_actualizables_2020 c on a.mes=c.mes_parque and a.ani=c.ani --###tabla sandbox anterior a la productivizacion \n----\nleft join sandbox.jg_bandas_no_compatibles_parque_movil d on a.ani=d.ani and a.mes=d.mes ------aca incluir la corrida con los cambios del paso 2\n;\n\n\ndrop table sandbox_datascientist.jfp_tablero_terminales_05;\ncreate table sandbox_datascientist.jfp_tablero_terminales_05 stored as orc as \nselect \na.ani\t,\na.Tipo_Cliente_DE,\na.sub_region_cnc_de\t,\na.region_cnc_de\t,\na.linea_negocio_cd\t,\na.producto_principal_de\t,\na.producto_oferta_cd\t,\na.producto_oferta_de\t,\na.indicador_tem_cd\t,\na.corporacion_tx\t,\na.tipo_documento_cd\t,\na.tac_nr\t,\na.imei_nr\t,\na.imsi_nr\t,\na.sim_lte_fl\t,\na.tecnologia_equipo_tx\t,\na.red_tx\t,\na.recarga_negocio_n0_mo\t,\na.recarga_negocio_n1_mo\t,\na.recarga_negocio_n2_mo\t,\na.parque_recargador_90\t,\na.producto\t,\na.cei_ind_experiencia_total_nr\t,\na.fl_region\t,\na.fl_navegador\t,\na.operador\t,\na.unidad_negocio\t,\na.terminal\t,\na.mb_4g\t,\na.mb_3g\t,\na.mb_2g\t,\na.mb_ni\t,\na.mb_tot\t,\na.fl_terminal\t,\na.fl_2m\t,\n--a.version_base_terminal\t,\n--a.version_tope_terminal\t,\n--a.gama\t,\n--a.fecha_primera_homologacion\t,\na.version_final\t,\na.version_num\t,\na.version_mayoritaria\t,\na.fl_apple\t,\na.fl_actualizable_android\t,\na.fl_cater_android\t,\na.fl_actualizable_apple\t,\na.fl_actualizable_apple_ultimo_update\t,\na.fl_cater_apple\t,\na.fl_grupo_so\t,\na.fl_grupo_accion\t,\na.fl_caso_de_uso\t,\na.banda_02\t,\na.banda_04\t,\na.banda_05\t,\na.banda_07\t,\na.banda_08\t,\na.banda_28\t,\na.porc_bandas_3g\t,\na.porc_bandas_4g\t,\na.fl_mayoritario_bandas_3g\t,\na.sitio_vive\t,\na.fl_sitio_vive\t,\na.fl_sitio_banda_4_vive\t,\na.fl_sitio_banda_2_vive\t,\na.fl_sitio_banda_7_vive\t,\na.fl_sitio_banda_28_vive\t,\na.fl_sitio_banda_5_vive\t,\na.fl_sitio_banda_2_5_vive\t,\na.sitio_trabaja\t,\na.fl_sitio_trabaja\t,\na.fl_sitio_banda_4_trabaja\t,\na.fl_sitio_banda_2_trabaja\t,\na.fl_sitio_banda_7_trabaja\t,\na.fl_sitio_banda_28_trabaja\t,\na.fl_sitio_banda_5_trabaja\t,\na.fl_sitio_banda_2_5_trabaja\t,\na.sitio_mayor\t,\na.fl_sitio_mayor\t,\na.fl_sitio_banda_4_mayor\t,\na.fl_sitio_banda_2_mayor\t,\na.fl_sitio_banda_7_mayor\t,\na.fl_sitio_banda_28_mayor\t,\na.fl_sitio_banda_5_mayor\t,\na.fl_sitio_banda_2_5_mayor\t,\n--\ncase \nwhen fl_terminal like '%2G%' then 'Obsoleto' ----ver si no conviene sacarlo de otro lado (at_parque/at_gsma?)\nwhen fl_terminal like '%3G%' then 'Obsoleto' ----ver si no conviene sacarlo de otro lado (at_parque/at_gsma?)\nwhen fl_grupo_so='Obsoleto' and fl_grupo_accion is null then 'Obsoleto'\nwhen fl_grupo_accion like '%cater%' then 'Obsoleto'\nwhen fl_grupo_accion like '%actualizacion%' then 'actualizable'\nwhen ((fl_grupo_so like '%Medio: (Entre 5 y 7 Android / Entre 10 y 13.4 Apple)%' \n\t  or fl_grupo_so like '%Maximo:(>=8 Android o >=13.4 Apple)%') and fl_grupo_accion is null)\n\t  then 'actualizado'\nwhen fl_grupo_so is null then 'SO no identificado'\nelse 'null' end as fl_total_so,\n--\ncase when a.fl_apple=1 then 'iOS'\nwhen b2.Sistema_Operativo_TX like '%Android%' then 'Android'\nwhen b2.Sistema_Operativo_TX like '%iOS%' then 'iOS'\n-- when b1.os_des is not null then b1.os_des\nelse 'Other'\nend as fl_SO_generico,\nmes\t\nfrom --sandbox.jg_tablero_terminales_back_up a\nsandbox_datascientist.jfp_tablero_terminales_04 a\n--left join urm4p.d_tacs b1 on a.tac_nr=b1.tac_id ----------------------------------------------- averiguar de donde sale, como se actualiza, y para qué la usamos\n--left join sbx_plan_bienvenida.tacs_gsma b2 on a.tac_nr=b2.tac_id\n--left join sandbox.aoc_jbr_tabla_gsma_dim b2 on a.tac_nr=b2.tac_nr\nleft join (select * from access_data.AT_Tacs_Gsma_M where periodo_nr = date_format(add_months(current_date,-1),'yyyyMM')) b2 on a.tac_nr = b2.tac_nr  --------------------------->>>>>>>CAMBIAR PERIODO\n;","user":"jpinelli","dateUpdated":"2024-03-28T20:36:43-0300","config":{"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","title":true,"results":{},"enabled":true,"fontSize":9,"editorHide":false},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 19370241"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 19370241"}]},"apps":[],"jobName":"paragraph_1652465212472_-947722649","id":"20201027-114335_1789514441","dateCreated":"2022-05-13T15:06:52-0300","dateStarted":"2024-03-13T14:01:58-0300","dateFinished":"2024-03-13T14:18:16-0300","status":"FINISHED","progressUpdateIntervalMs":500,"$$hashKey":"object:55"},{"title":"INSERT FINAL ","text":"%jdbc(hive)\n\nINSERT OVERWRITE table sandbox.jg_tablero_terminales\npartition (mes)\nselect \nani\t,\nTipo_Cliente_DE,\nsub_region_cnc_de\t,\nregion_cnc_de\t,\nlinea_negocio_cd\t,\nproducto_principal_de\t,\nproducto_oferta_cd\t,\nproducto_oferta_de\t,\nindicador_tem_cd\t,\ncorporacion_tx\t,\ntipo_documento_cd\t,\ntac_nr\t,\nimei_nr\t,\nimsi_nr\t,\nsim_lte_fl\t,\ntecnologia_equipo_tx\t,\nred_tx\t,\nrecarga_negocio_n0_mo\t,\nrecarga_negocio_n1_mo\t,\nrecarga_negocio_n2_mo\t,\nparque_recargador_90\t,\nproducto\t,\ncei_ind_experiencia_total_nr\t,\nfl_region\t,\nfl_navegador\t,\noperador\t,\nunidad_negocio\t,\nterminal\t,\nmb_4g\t,\nmb_3g\t,\nmb_2g\t,\nmb_ni\t,\nmb_tot\t,\nfl_terminal\t,\nfl_2m\t,\n'No disponible', --version_base_terminal\t,\n'No disponible', --version_tope_terminal\t,\n'No disponible', --gama\t,\n'No disponible', --fecha_primera_homologacion\t,\nversion_final\t,\nversion_num\t,\nversion_mayoritaria\t,\nfl_apple\t,\nfl_actualizable_android\t,\nfl_cater_android\t,\nfl_actualizable_apple\t,\nfl_actualizable_apple_ultimo_update\t,\nfl_cater_apple\t,\nfl_grupo_so\t,\nfl_grupo_accion\t,\nfl_caso_de_uso\t,\nbanda_02\t,\nbanda_04\t,\nbanda_05\t,\nbanda_07\t,\nbanda_08\t,\nbanda_28\t,\nporc_bandas_3g\t,\nporc_bandas_4g\t,\nfl_mayoritario_bandas_3g\t,\nsitio_vive\t,\nfl_sitio_vive\t,\nfl_sitio_banda_4_vive\t,\nfl_sitio_banda_2_vive\t,\nfl_sitio_banda_7_vive\t,\nfl_sitio_banda_28_vive\t,\nfl_sitio_banda_5_vive\t,\nfl_sitio_banda_2_5_vive\t,\nsitio_trabaja\t,\nfl_sitio_trabaja\t,\nfl_sitio_banda_4_trabaja\t,\nfl_sitio_banda_2_trabaja\t,\nfl_sitio_banda_7_trabaja\t,\nfl_sitio_banda_28_trabaja\t,\nfl_sitio_banda_5_trabaja\t,\nfl_sitio_banda_2_5_trabaja\t,\nsitio_mayor\t,\nfl_sitio_mayor\t,\nfl_sitio_banda_4_mayor\t,\nfl_sitio_banda_2_mayor\t,\nfl_sitio_banda_7_mayor\t,\nfl_sitio_banda_28_mayor\t,\nfl_sitio_banda_5_mayor\t,\nfl_sitio_banda_2_5_mayor\t,\nfl_total_so, \ncase when fl_SO_generico is null or fl_SO_generico=\"\" then 'Other'\nelse fl_SO_generico end as fl_SO_generico,\nmes\t\nfrom sandbox_datascientist.jfp_tablero_terminales_05\n;\n","user":"jpinelli","dateUpdated":"2024-03-28T20:36:43-0300","config":{"tableHide":false,"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"title":true,"results":{},"enabled":true,"fontSize":9},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : 19370241"}]},"apps":[],"jobName":"paragraph_1652465212575_-679057814","id":"20210806-141003_126416958","dateCreated":"2022-05-13T15:06:52-0300","dateStarted":"2024-03-13T14:23:08-0300","dateFinished":"2024-03-13T14:24:46-0300","status":"FINISHED","progressUpdateIntervalMs":500,"$$hashKey":"object:56"},{"title":"LIMPIEZA","text":"%jdbc(hive)\ndrop table sandbox_datascientist.jfp_tablero_terminales_01;\ndrop table sandbox_datascientist.jfp_tablero_terminales_02;\ndrop table sandbox_datascientist.jfp_tablero_terminales_03;\ndrop table sandbox_datascientist.jfp_tablero_terminales_04;\ndrop table sandbox_datascientist.jfp_tablero_terminales_05;","user":"jpinelli","dateUpdated":"2024-03-28T20:36:43-0300","config":{"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","title":true,"results":{},"enabled":true,"fontSize":9,"editorHide":false},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"}]},"apps":[],"jobName":"paragraph_1652465212621_-212649295","id":"20201028-122430_892920743","dateCreated":"2022-05-13T15:06:52-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:57"},{"title":"TABLA ACUMULADA NO CORRER ","text":"%jdbc (hive)\n/*\ndrop table  sandbox.jg_tablero_terminales ;\nCREATE TABLE sandbox.jg_tablero_terminales\n(\nani\tSTRING\t,\nTipo_Cliente_DE STRING,\nsub_region_cnc_de\tSTRING\t,\nregion_cnc_de\tSTRING\t,\nlinea_negocio_cd\tSTRING\t,\nproducto_principal_de\tSTRING\t,\nproducto_oferta_cd\tSTRING\t,\nproducto_oferta_de\tSTRING\t,\nindicador_tem_cd\tSTRING\t,\ncorporacion_tx\tSTRING\t,\ntipo_documento_cd\tSTRING\t,\ntac_nr\tSTRING\t,\nimei_nr\tSTRING\t,\nimsi_nr\tSTRING\t,\nsim_lte_fl\tSTRING\t,\ntecnologia_equipo_tx\tSTRING\t,\nred_tx\tSTRING\t,\nrecarga_negocio_n0_mo\tSTRING\t,\nrecarga_negocio_n1_mo\tSTRING\t,\nrecarga_negocio_n2_mo\tSTRING\t,\nparque_recargador_90\tSTRING\t,\nproducto\tSTRING\t,\ncei_ind_experiencia_total_nr\tSTRING\t,\nfl_region\tSTRING\t,\nfl_navegador\tSTRING\t,\noperador\tSTRING\t,\nunidad_negocio\tSTRING\t,\nterminal\tSTRING\t,\nmb_4g\tSTRING\t,\nmb_3g\tSTRING\t,\nmb_2g\tSTRING\t,\nmb_ni\tSTRING\t,\nmb_tot\tSTRING\t,\nfl_terminal\tSTRING\t,\nfl_2m\tSTRING\t,\nversion_base_terminal\tSTRING\t,\nversion_tope_terminal\tSTRING\t,\ngama\tSTRING\t,\nfecha_primera_homologacion\tSTRING\t,\nversion_final\tSTRING\t,\nversion_num\tSTRING\t,\nversion_mayoritaria\tSTRING\t,\nfl_apple\tSTRING\t,\nfl_actualizable_android\tSTRING\t,\nfl_cater_android\tSTRING\t,\nfl_actualizable_apple\tSTRING\t,\nfl_actualizable_apple_ultimo_update\tSTRING\t,\nfl_cater_apple\tSTRING\t,\nfl_grupo_so\tSTRING\t,\nfl_grupo_accion\tSTRING\t,\nfl_caso_de_uso\tSTRING\t,\nbanda_02\tSTRING\t,\nbanda_04\tSTRING\t,\nbanda_05\tSTRING\t,\nbanda_07\tSTRING\t,\nbanda_08\tSTRING\t,\nbanda_28\tSTRING\t,\nporc_bandas_3g\tSTRING\t,\nporc_bandas_4g\tSTRING\t,\nfl_mayoritario_bandas_3g\tSTRING\t,\nsitio_vive\tSTRING\t,\nfl_sitio_vive\tSTRING\t,\nfl_sitio_banda_4_vive\tSTRING\t,\nfl_sitio_banda_2_vive\tSTRING\t,\nfl_sitio_banda_7_vive\tSTRING\t,\nfl_sitio_banda_28_vive\tSTRING\t,\nfl_sitio_banda_5_vive\tSTRING\t,\nfl_sitio_banda_2_5_vive\tSTRING\t,\nsitio_trabaja\tSTRING\t,\nfl_sitio_trabaja\tSTRING\t,\nfl_sitio_banda_4_trabaja\tSTRING\t,\nfl_sitio_banda_2_trabaja\tSTRING\t,\nfl_sitio_banda_7_trabaja\tSTRING\t,\nfl_sitio_banda_28_trabaja\tSTRING\t,\nfl_sitio_banda_5_trabaja\tSTRING\t,\nfl_sitio_banda_2_5_trabaja\tSTRING\t,\nsitio_mayor\tSTRING\t,\nfl_sitio_mayor\tSTRING\t,\nfl_sitio_banda_4_mayor\tSTRING\t,\nfl_sitio_banda_2_mayor\tSTRING\t,\nfl_sitio_banda_7_mayor\tSTRING\t,\nfl_sitio_banda_28_mayor\tSTRING\t,\nfl_sitio_banda_5_mayor\tSTRING\t,\nfl_sitio_banda_2_5_mayor\tSTRING\t,\nfl_total_so STRING,\nfl_SO_generico STRING\n)\nPARTITIONED BY (mes string)\nCLUSTERED BY (ani) INTO 256 BUCKETS;\n*/","user":"jpinelli","dateUpdated":"2024-03-28T20:36:43-0300","config":{"tableHide":true,"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"title":true,"results":{},"enabled":false,"fontSize":9},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"}]},"apps":[],"jobName":"paragraph_1652465212529_384523122","id":"20201028-114354_1462815313","dateCreated":"2022-05-13T15:06:52-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:58"},{"text":"%jdbc\n","user":"jpinelli","dateUpdated":"2024-03-28T20:36:43-0300","config":{"colWidth":12,"fontSize":9,"enabled":true,"results":{},"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"editorMode":"ace/mode/sql","editorHide":false},"settings":{"params":{},"forms":{}},"apps":[],"jobName":"paragraph_1652465212675_-1833389350","id":"20210105-085055_347871977","dateCreated":"2022-05-13T15:06:52-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:59"}],"name":"JPinelli/TERMINALES/Term/3-TABLERO_INTEGRAL_TERMINALES CORR GSMA 1","id":"2H3AQBPRS","noteParams":{},"noteForms":{},"angularObjects":{"jdbc:shared_process":[],"sh:jpinelli:":[]},"config":{"isZeppelinNotebookCronEnable":false,"looknfeel":"default","personalizedMode":"false"},"info":{}}
+{
+  "paragraphs": [
+    {
+      "title": "PARQUE UNIFICADO --> PARTIDA",
+      "text": "%jdbc (hive)\n\ndrop table sandbox_datascientist.jfp_tablero_terminales_01;\ncreate table sandbox_datascientist.jfp_tablero_terminales_01 stored as orc as \nselect a.*\nfrom trafico.sdr_dyn_cei a\nwhere a.fecha between date_format(date_sub(current_date,day(current_date)),'yyyyMM01') and date_format(date_sub(current_date,day(current_date)),'yyyyMMdd')\n------------------------------------------------------------------------------------->>>>>> CAMBIAR FECHA\nand base_hexa_cell_id like '72207%'\nand base_msisdn is not null\n;\n\ndrop table sandbox_datascientist.jfp_tablero_terminales_02;\ncreate table sandbox_datascientist.jfp_tablero_terminales_02 stored as orc as \nselect substring (fecha,1, 6) as mes , base_msisdn as ani, avg(base_cei_score) as cei from sandbox_datascientist.jfp_tablero_terminales_01\ngroup by substring (fecha,1, 6), base_msisdn\n;\n\n\ndrop table sandbox_datascientist.jfp_tablero_terminales_03;\ncreate table sandbox_datascientist.jfp_tablero_terminales_03 \nas\nselect \na.valor_recurso_primario_cd as ani,\na.Tipo_Cliente_DE,\na.sub_region_cnc_de,\na.region_cnc_de,\na.linea_negocio_cd,\na.producto_principal_de,\n--------------------Modificacion 6/4/22-----------------------------------------------\n--a.producto_oferta_cd,\na.catalogo_producto_oferta_id as producto_oferta_cd,\n--a.producto_oferta_de,\na.oferta_de as producto_oferta_de,\n--------------------------------------------------------------------------------------\n\na.indicador_tem_cd,\na.corporacion_tx,\na.tipo_documento_cd,\na.tac_nr,\na.imei_nr,\na.imsi_nr,\na.sim_lte_fl,\n--------------------Modificacion 6/4/22-----------------------------------------------\n--a.tecnologia_equipo_tx,\ng.banda_general_tx as tecnologia_equipo_tx,\n--a.red_tx,\ncase\nwhen g.banda_general_tx = 'LTE Compatible' and SUBSTR(a.IMSI_NR,8,1) = '9' then '4G'\nwhen g.banda_general_tx = 'LTE Compatible' and SUBSTR(a.IMSI_NR,8,1) <> '9' then '3G'\nwhen g.banda_general_tx = 'LTE No Compatible' THEN '3G'\nwhen g.banda_general_tx = 'UMTS' THEN '3G'\nwhen g.banda_general_tx = 'GSM' THEN '2G'\nelse 'No Informado' end as red_tx,\nREGEXP_REPLACE(g.Fabricante_Equipo_DE, ',', '') AS marca,\n--a.recarga_negocio_n0_mo,\n--a.recarga_negocio_n1_mo,\n--a.recarga_negocio_n2_mo,\nd.recarga_negocio recarga_negocio_n0_mo,\ne.recarga_negocio recarga_negocio_n1_mo,\nf.recarga_negocio recarga_negocio_n2_mo,\n--case when a.tipo_oferta_de in ('PortePagado', 'PR_PPAL_ACTIVA', 'PR_PPAL_EXPRESS', 'Prepaid', 'PRE') and (a.recarga_negocio_n2_mo>0 or a.recarga_negocio_n1_mo>0 or a.recarga_negocio_n0_mo>0) then 1 else 0 end as parque_recargador_90,\ncase when d.suscripcion_id is not null then 1 else 0 end as parque_recargador_90,\n--------------------------------------------------------------------------------------\n\ncase when a.tipo_oferta_de in ('PR_PPAL_AHORRO', 'Control') then 'Control'\nwhen a.tipo_oferta_de in ('PR_PPAL_CONTRATO', 'Postpago') then 'Pospago'\nwhen a.tipo_oferta_de in ('PortePagado', 'PR_PPAL_ACTIVA', 'PR_PPAL_EXPRESS', 'Prepaid', 'PRE') then 'Prepago'\nend as producto,\nb.cei as Cei_Ind_Experiencia_total_NR,\nc.fl_region,\nc.fl_navegador,\nc.operador,\nc.unidad_negocio,\nc.terminal,\nc.mb_4g,\nc.mb_3g,\nc.mb_2g,\nc.mb_ni,\nc.mb_tot,\ncase when c.terminal in ('4G READY' ,'NI_4G') then '4G_READY'\n            when c.terminal ='4G SIN LTE' then 'Mala configuracion'\n            when c.terminal ='4G SIN USIM' then 'Sin Usim'\n            when c.terminal in('NO IDENTIFICADO','ROAMERS','RESTO') then 'Otros' \n            when c.terminal is null then 'Otros' else c.terminal end fl_terminal,\na.periodo_nr as mes\n--------------------Modificacion 6/4/22-----------------------------------------------\n--from SBX_PLAN_BIENVENIDA.Parque_Unificado_Movil a   -----cambiar por at_parque\nfrom ACCESS_DATA.AT_Parque_M a \n-----------------------------------------------------------------------------------------\nleft join sandbox_datascientist.jfp_tablero_terminales_02 b on a.valor_recurso_primario_cd=b.ani\nleft join ANALYTICS.off_xdr_mes_5_out_modoff c on a.valor_recurso_primario_cd=substring(c.ani, 3,10)  and a.periodo_nr=c.aniomes\n--sandbox.cnc_XDR_MES_5 c\n--URM_AR.off_xdr_mes_5_out_modoff c \n--------------------Modificacion 6/4/22-----------------------------------------------\nleft join sandbox_datascientist.jfp_bandas_no_compatibles_aux d on a.suscripcion_id=d.suscripcion_id and a.periodo_nr=d.periodo_nr\nleft join sandbox_datascientist.jfp_bandas_no_compatibles_aux e on a.suscripcion_id=e.suscripcion_id and a.periodo_nr=(e.periodo_nr+1)\nleft join sandbox_datascientist.jfp_bandas_no_compatibles_aux f on a.suscripcion_id=f.suscripcion_id and a.periodo_nr=(f.periodo_nr+2)\nleft join (select * from access_data.AT_Tacs_Gsma_M where periodo_nr = date_format(add_months(current_date,-1),'yyyyMM')) g on a.tac_nr = g.tac_nr ------------------------CAMBIAR PERIODO\n-----------------------------------------------------------------------------------------\n\nwhere \na.periodo_nr= date_format(add_months(current_date,-1),'yyyyMM') --------------------------------------------------------------------------------------------------------CAMBIAR PERIODO\nand a.estado_suscripcion_de not in ('Terminated', 'Cancelled') \nand a.Tipo_Cliente_DE not in ('No Informado')\nand a.Tipo_Oferta_DE not in ('PR_PPAL_-1', 'No Informado')\n--------------------Modificacion 6/4/22-------------------------------------------------\nand a.Suscripcion_CD NOT LIKE 'K%'\nand a.Linea_Negocio_CD = 'WRLS'\n-----------------------------------------------------------------------------------------\n;",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:43-0300",
+      "config": {
+        "lineNumbers": true,
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "fontSize": 9,
+        "title": true,
+        "results": {},
+        "enabled": true,
+        "editorHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 14163366"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 19370241"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465212417_-1433655095",
+      "id": "20201027-102614_1292585501",
+      "dateCreated": "2022-05-13T15:06:52-0300",
+      "dateStarted": "2024-03-13T13:00:30-0300",
+      "dateFinished": "2024-03-13T14:00:15-0300",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500,
+      "focus": true,
+      "$$hashKey": "object:54"
+    },
+    {
+      "title": "Agrego 2M  terminales con bandas no compatibles y datos de SO",
+      "text": "%jdbc (hive)\ndrop table sandbox_datascientist.jfp_tablero_terminales_04;\ncreate table sandbox_datascientist.jfp_tablero_terminales_04 stored as orc as \nselect \na.*,\ncase when b.ani is not null then 1 else 0 end as fl_2M,\n--c.version_base_terminal,\n--c.version_tope_terminal,\n--c.gama,\n--c.fecha_primera_homologacion,\nc.version_final,\nc.version_num,\nc.version_mayoritaria,\n--------------------Modificacion 6/4/22-------------------------------------------------\n--c.fl_apple,\nCASE WHEN a.marca LIKE '%Apple Inc%' THEN 1 ELSE 0 end AS fl_apple,\n-----------------------------------------------------------------------------------------\nc.fl_actualizable_android,\nc.fl_cater_android,\nc.fl_actualizable_apple,\nc.fl_actualizable_apple_ultimo_update,\nc.fl_cater_apple,\nc.fl_grupo_so,\nc.fl_grupo_accion,\nd.fl_caso_de_uso,\nd.banda_02,\nd.banda_04,\nd.banda_05,\nd.banda_07,\nd.banda_08,\nd.banda_28,\nd.porc_bandas_3g,\nd.porc_bandas_4g,\nd.fl_mayoritario_bandas_3g,\nd.sitio_vive,\nd.fl_sitio_vive,\nd.fl_sitio_banda_4_vive,\nd.fl_sitio_banda_2_vive,\nd.fl_sitio_banda_7_vive,\nd.fl_sitio_banda_28_vive,\nd.fl_sitio_banda_5_vive,\nd.fl_sitio_banda_2_5_vive,\nd.sitio_trabaja,\nd.fl_sitio_trabaja,\nd.fl_sitio_banda_4_trabaja,\nd.fl_sitio_banda_2_trabaja,\nd.fl_sitio_banda_7_trabaja,\nd.fl_sitio_banda_28_trabaja,\nd.fl_sitio_banda_5_trabaja,\nfl_sitio_banda_2_5_trabaja,\nd.sitio_mayor,\nd.fl_sitio_mayor,\nd.fl_sitio_banda_4_mayor,\nd.fl_sitio_banda_2_mayor,\nd.fl_sitio_banda_7_mayor,\nd.fl_sitio_banda_28_mayor,\nd.fl_sitio_banda_5_mayor,\nd.fl_sitio_banda_2_5_mayor\nfrom sandbox_datascientist.jfp_tablero_terminales_03 a\n----\n--left join (select ani from sandbox.parque_thp where thp<=2000 and periodo = 202107)b on a.ani=b.ani --#thp sandbox DUCA\nleft join (select ani from tableros.parque_thp where thp<=2000 and periodo = date_format(add_months(current_date,-1),'yyyyMM')) b on a.ani=b.ani --#thp productiva ------------->>>>>CAMBIAR PERIODO\n\n----\nleft join Tableros.equipos_actualizables c on a.mes=c.mes_parque and a.ani=c.ani and c.fl_es_tuenti=0 --###tabla productiva \n--left join sandbox.jg_equipos_actualizables_2020 c on a.mes=c.mes_parque and a.ani=c.ani --###tabla sandbox anterior a la productivizacion \n----\nleft join sandbox.jg_bandas_no_compatibles_parque_movil d on a.ani=d.ani and a.mes=d.mes ------aca incluir la corrida con los cambios del paso 2\n;\n\n\ndrop table sandbox_datascientist.jfp_tablero_terminales_05;\ncreate table sandbox_datascientist.jfp_tablero_terminales_05 stored as orc as \nselect \na.ani\t,\na.Tipo_Cliente_DE,\na.sub_region_cnc_de\t,\na.region_cnc_de\t,\na.linea_negocio_cd\t,\na.producto_principal_de\t,\na.producto_oferta_cd\t,\na.producto_oferta_de\t,\na.indicador_tem_cd\t,\na.corporacion_tx\t,\na.tipo_documento_cd\t,\na.tac_nr\t,\na.imei_nr\t,\na.imsi_nr\t,\na.sim_lte_fl\t,\na.tecnologia_equipo_tx\t,\na.red_tx\t,\na.recarga_negocio_n0_mo\t,\na.recarga_negocio_n1_mo\t,\na.recarga_negocio_n2_mo\t,\na.parque_recargador_90\t,\na.producto\t,\na.cei_ind_experiencia_total_nr\t,\na.fl_region\t,\na.fl_navegador\t,\na.operador\t,\na.unidad_negocio\t,\na.terminal\t,\na.mb_4g\t,\na.mb_3g\t,\na.mb_2g\t,\na.mb_ni\t,\na.mb_tot\t,\na.fl_terminal\t,\na.fl_2m\t,\n--a.version_base_terminal\t,\n--a.version_tope_terminal\t,\n--a.gama\t,\n--a.fecha_primera_homologacion\t,\na.version_final\t,\na.version_num\t,\na.version_mayoritaria\t,\na.fl_apple\t,\na.fl_actualizable_android\t,\na.fl_cater_android\t,\na.fl_actualizable_apple\t,\na.fl_actualizable_apple_ultimo_update\t,\na.fl_cater_apple\t,\na.fl_grupo_so\t,\na.fl_grupo_accion\t,\na.fl_caso_de_uso\t,\na.banda_02\t,\na.banda_04\t,\na.banda_05\t,\na.banda_07\t,\na.banda_08\t,\na.banda_28\t,\na.porc_bandas_3g\t,\na.porc_bandas_4g\t,\na.fl_mayoritario_bandas_3g\t,\na.sitio_vive\t,\na.fl_sitio_vive\t,\na.fl_sitio_banda_4_vive\t,\na.fl_sitio_banda_2_vive\t,\na.fl_sitio_banda_7_vive\t,\na.fl_sitio_banda_28_vive\t,\na.fl_sitio_banda_5_vive\t,\na.fl_sitio_banda_2_5_vive\t,\na.sitio_trabaja\t,\na.fl_sitio_trabaja\t,\na.fl_sitio_banda_4_trabaja\t,\na.fl_sitio_banda_2_trabaja\t,\na.fl_sitio_banda_7_trabaja\t,\na.fl_sitio_banda_28_trabaja\t,\na.fl_sitio_banda_5_trabaja\t,\na.fl_sitio_banda_2_5_trabaja\t,\na.sitio_mayor\t,\na.fl_sitio_mayor\t,\na.fl_sitio_banda_4_mayor\t,\na.fl_sitio_banda_2_mayor\t,\na.fl_sitio_banda_7_mayor\t,\na.fl_sitio_banda_28_mayor\t,\na.fl_sitio_banda_5_mayor\t,\na.fl_sitio_banda_2_5_mayor\t,\n--\ncase \nwhen fl_terminal like '%2G%' then 'Obsoleto' ----ver si no conviene sacarlo de otro lado (at_parque/at_gsma?)\nwhen fl_terminal like '%3G%' then 'Obsoleto' ----ver si no conviene sacarlo de otro lado (at_parque/at_gsma?)\nwhen fl_grupo_so='Obsoleto' and fl_grupo_accion is null then 'Obsoleto'\nwhen fl_grupo_accion like '%cater%' then 'Obsoleto'\nwhen fl_grupo_accion like '%actualizacion%' then 'actualizable'\nwhen ((fl_grupo_so like '%Medio: (Entre 5 y 7 Android / Entre 10 y 13.4 Apple)%' \n\t  or fl_grupo_so like '%Maximo:(>=8 Android o >=13.4 Apple)%') and fl_grupo_accion is null)\n\t  then 'actualizado'\nwhen fl_grupo_so is null then 'SO no identificado'\nelse 'null' end as fl_total_so,\n--\ncase when a.fl_apple=1 then 'iOS'\nwhen b2.Sistema_Operativo_TX like '%Android%' then 'Android'\nwhen b2.Sistema_Operativo_TX like '%iOS%' then 'iOS'\n-- when b1.os_des is not null then b1.os_des\nelse 'Other'\nend as fl_SO_generico,\nmes\t\nfrom --sandbox.jg_tablero_terminales_back_up a\nsandbox_datascientist.jfp_tablero_terminales_04 a\n--left join urm4p.d_tacs b1 on a.tac_nr=b1.tac_id ----------------------------------------------- averiguar de donde sale, como se actualiza, y para qué la usamos\n--left join sbx_plan_bienvenida.tacs_gsma b2 on a.tac_nr=b2.tac_id\n--left join sandbox.aoc_jbr_tabla_gsma_dim b2 on a.tac_nr=b2.tac_nr\nleft join (select * from access_data.AT_Tacs_Gsma_M where periodo_nr = date_format(add_months(current_date,-1),'yyyyMM')) b2 on a.tac_nr = b2.tac_nr  --------------------------->>>>>>>CAMBIAR PERIODO\n;",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:43-0300",
+      "config": {
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "title": true,
+        "results": {},
+        "enabled": true,
+        "fontSize": 9,
+        "editorHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 19370241"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 19370241"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465212472_-947722649",
+      "id": "20201027-114335_1789514441",
+      "dateCreated": "2022-05-13T15:06:52-0300",
+      "dateStarted": "2024-03-13T14:01:58-0300",
+      "dateFinished": "2024-03-13T14:18:16-0300",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:55"
+    },
+    {
+      "title": "INSERT FINAL ",
+      "text": "%jdbc(hive)\n\nINSERT OVERWRITE table sandbox.jg_tablero_terminales\npartition (mes)\nselect \nani\t,\nTipo_Cliente_DE,\nsub_region_cnc_de\t,\nregion_cnc_de\t,\nlinea_negocio_cd\t,\nproducto_principal_de\t,\nproducto_oferta_cd\t,\nproducto_oferta_de\t,\nindicador_tem_cd\t,\ncorporacion_tx\t,\ntipo_documento_cd\t,\ntac_nr\t,\nimei_nr\t,\nimsi_nr\t,\nsim_lte_fl\t,\ntecnologia_equipo_tx\t,\nred_tx\t,\nrecarga_negocio_n0_mo\t,\nrecarga_negocio_n1_mo\t,\nrecarga_negocio_n2_mo\t,\nparque_recargador_90\t,\nproducto\t,\ncei_ind_experiencia_total_nr\t,\nfl_region\t,\nfl_navegador\t,\noperador\t,\nunidad_negocio\t,\nterminal\t,\nmb_4g\t,\nmb_3g\t,\nmb_2g\t,\nmb_ni\t,\nmb_tot\t,\nfl_terminal\t,\nfl_2m\t,\n'No disponible', --version_base_terminal\t,\n'No disponible', --version_tope_terminal\t,\n'No disponible', --gama\t,\n'No disponible', --fecha_primera_homologacion\t,\nversion_final\t,\nversion_num\t,\nversion_mayoritaria\t,\nfl_apple\t,\nfl_actualizable_android\t,\nfl_cater_android\t,\nfl_actualizable_apple\t,\nfl_actualizable_apple_ultimo_update\t,\nfl_cater_apple\t,\nfl_grupo_so\t,\nfl_grupo_accion\t,\nfl_caso_de_uso\t,\nbanda_02\t,\nbanda_04\t,\nbanda_05\t,\nbanda_07\t,\nbanda_08\t,\nbanda_28\t,\nporc_bandas_3g\t,\nporc_bandas_4g\t,\nfl_mayoritario_bandas_3g\t,\nsitio_vive\t,\nfl_sitio_vive\t,\nfl_sitio_banda_4_vive\t,\nfl_sitio_banda_2_vive\t,\nfl_sitio_banda_7_vive\t,\nfl_sitio_banda_28_vive\t,\nfl_sitio_banda_5_vive\t,\nfl_sitio_banda_2_5_vive\t,\nsitio_trabaja\t,\nfl_sitio_trabaja\t,\nfl_sitio_banda_4_trabaja\t,\nfl_sitio_banda_2_trabaja\t,\nfl_sitio_banda_7_trabaja\t,\nfl_sitio_banda_28_trabaja\t,\nfl_sitio_banda_5_trabaja\t,\nfl_sitio_banda_2_5_trabaja\t,\nsitio_mayor\t,\nfl_sitio_mayor\t,\nfl_sitio_banda_4_mayor\t,\nfl_sitio_banda_2_mayor\t,\nfl_sitio_banda_7_mayor\t,\nfl_sitio_banda_28_mayor\t,\nfl_sitio_banda_5_mayor\t,\nfl_sitio_banda_2_5_mayor\t,\nfl_total_so, \ncase when fl_SO_generico is null or fl_SO_generico=\"\" then 'Other'\nelse fl_SO_generico end as fl_SO_generico,\nmes\t\nfrom sandbox_datascientist.jfp_tablero_terminales_05\n;\n",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:43-0300",
+      "config": {
+        "tableHide": false,
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "title": true,
+        "results": {},
+        "enabled": true,
+        "fontSize": 9
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 19370241"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465212575_-679057814",
+      "id": "20210806-141003_126416958",
+      "dateCreated": "2022-05-13T15:06:52-0300",
+      "dateStarted": "2024-03-13T14:23:08-0300",
+      "dateFinished": "2024-03-13T14:24:46-0300",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:56"
+    },
+    {
+      "title": "LIMPIEZA",
+      "text": "%jdbc(hive)\ndrop table sandbox_datascientist.jfp_tablero_terminales_01;\ndrop table sandbox_datascientist.jfp_tablero_terminales_02;\ndrop table sandbox_datascientist.jfp_tablero_terminales_03;\ndrop table sandbox_datascientist.jfp_tablero_terminales_04;\ndrop table sandbox_datascientist.jfp_tablero_terminales_05;",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:43-0300",
+      "config": {
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "title": true,
+        "results": {},
+        "enabled": true,
+        "fontSize": 9,
+        "editorHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465212621_-212649295",
+      "id": "20201028-122430_892920743",
+      "dateCreated": "2022-05-13T15:06:52-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:57"
+    },
+    {
+      "title": "TABLA ACUMULADA NO CORRER ",
+      "text": "%jdbc (hive)\n/*\ndrop table  sandbox.jg_tablero_terminales ;\nCREATE TABLE sandbox.jg_tablero_terminales\n(\nani\tSTRING\t,\nTipo_Cliente_DE STRING,\nsub_region_cnc_de\tSTRING\t,\nregion_cnc_de\tSTRING\t,\nlinea_negocio_cd\tSTRING\t,\nproducto_principal_de\tSTRING\t,\nproducto_oferta_cd\tSTRING\t,\nproducto_oferta_de\tSTRING\t,\nindicador_tem_cd\tSTRING\t,\ncorporacion_tx\tSTRING\t,\ntipo_documento_cd\tSTRING\t,\ntac_nr\tSTRING\t,\nimei_nr\tSTRING\t,\nimsi_nr\tSTRING\t,\nsim_lte_fl\tSTRING\t,\ntecnologia_equipo_tx\tSTRING\t,\nred_tx\tSTRING\t,\nrecarga_negocio_n0_mo\tSTRING\t,\nrecarga_negocio_n1_mo\tSTRING\t,\nrecarga_negocio_n2_mo\tSTRING\t,\nparque_recargador_90\tSTRING\t,\nproducto\tSTRING\t,\ncei_ind_experiencia_total_nr\tSTRING\t,\nfl_region\tSTRING\t,\nfl_navegador\tSTRING\t,\noperador\tSTRING\t,\nunidad_negocio\tSTRING\t,\nterminal\tSTRING\t,\nmb_4g\tSTRING\t,\nmb_3g\tSTRING\t,\nmb_2g\tSTRING\t,\nmb_ni\tSTRING\t,\nmb_tot\tSTRING\t,\nfl_terminal\tSTRING\t,\nfl_2m\tSTRING\t,\nversion_base_terminal\tSTRING\t,\nversion_tope_terminal\tSTRING\t,\ngama\tSTRING\t,\nfecha_primera_homologacion\tSTRING\t,\nversion_final\tSTRING\t,\nversion_num\tSTRING\t,\nversion_mayoritaria\tSTRING\t,\nfl_apple\tSTRING\t,\nfl_actualizable_android\tSTRING\t,\nfl_cater_android\tSTRING\t,\nfl_actualizable_apple\tSTRING\t,\nfl_actualizable_apple_ultimo_update\tSTRING\t,\nfl_cater_apple\tSTRING\t,\nfl_grupo_so\tSTRING\t,\nfl_grupo_accion\tSTRING\t,\nfl_caso_de_uso\tSTRING\t,\nbanda_02\tSTRING\t,\nbanda_04\tSTRING\t,\nbanda_05\tSTRING\t,\nbanda_07\tSTRING\t,\nbanda_08\tSTRING\t,\nbanda_28\tSTRING\t,\nporc_bandas_3g\tSTRING\t,\nporc_bandas_4g\tSTRING\t,\nfl_mayoritario_bandas_3g\tSTRING\t,\nsitio_vive\tSTRING\t,\nfl_sitio_vive\tSTRING\t,\nfl_sitio_banda_4_vive\tSTRING\t,\nfl_sitio_banda_2_vive\tSTRING\t,\nfl_sitio_banda_7_vive\tSTRING\t,\nfl_sitio_banda_28_vive\tSTRING\t,\nfl_sitio_banda_5_vive\tSTRING\t,\nfl_sitio_banda_2_5_vive\tSTRING\t,\nsitio_trabaja\tSTRING\t,\nfl_sitio_trabaja\tSTRING\t,\nfl_sitio_banda_4_trabaja\tSTRING\t,\nfl_sitio_banda_2_trabaja\tSTRING\t,\nfl_sitio_banda_7_trabaja\tSTRING\t,\nfl_sitio_banda_28_trabaja\tSTRING\t,\nfl_sitio_banda_5_trabaja\tSTRING\t,\nfl_sitio_banda_2_5_trabaja\tSTRING\t,\nsitio_mayor\tSTRING\t,\nfl_sitio_mayor\tSTRING\t,\nfl_sitio_banda_4_mayor\tSTRING\t,\nfl_sitio_banda_2_mayor\tSTRING\t,\nfl_sitio_banda_7_mayor\tSTRING\t,\nfl_sitio_banda_28_mayor\tSTRING\t,\nfl_sitio_banda_5_mayor\tSTRING\t,\nfl_sitio_banda_2_5_mayor\tSTRING\t,\nfl_total_so STRING,\nfl_SO_generico STRING\n)\nPARTITIONED BY (mes string)\nCLUSTERED BY (ani) INTO 256 BUCKETS;\n*/",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:43-0300",
+      "config": {
+        "tableHide": true,
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "title": true,
+        "results": {},
+        "enabled": false,
+        "fontSize": 9
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465212529_384523122",
+      "id": "20201028-114354_1462815313",
+      "dateCreated": "2022-05-13T15:06:52-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:58"
+    },
+    {
+      "text": "%jdbc\n",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:43-0300",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 9,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "editorMode": "ace/mode/sql",
+        "editorHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465212675_-1833389350",
+      "id": "20210105-085055_347871977",
+      "dateCreated": "2022-05-13T15:06:52-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:59"
+    }
+  ],
+  "name": "JPinelli/TERMINALES/Term/3-TABLERO_INTEGRAL_TERMINALES CORR GSMA 1",
+  "id": "2H3AQBPRS",
+  "noteParams": {},
+  "noteForms": {},
+  "angularObjects": {
+    "jdbc:shared_process": [],
+    "sh:jpinelli:": []
+  },
+  "config": {
+    "isZeppelinNotebookCronEnable": false,
+    "looknfeel": "default",
+    "personalizedMode": "false"
+  },
+  "info": {}
+}

@@ -1,1 +1,571 @@
-﻿{"paragraphs":[{"title":"Defino universo de mal configurados desde la tabla de casuisticas (tablero integral)","text":"%jdbc(hive)\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_01;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_01 stored as orc as \nselect \n*\nfrom sandbox.jg_tablero_terminales a\nwhere\na.mes=date_format(add_months(current_date,-1),'yyyyMM') -----------------------------------------------------------------------------------------------------------------CAMBIAR periodo\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so not in('actualizable', 'Obsoleto')\nand a.fl_terminal in ('Mala configuracion')\n;","user":"jpinelli","dateUpdated":"2024-03-28T20:36:31-0300","config":{"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"title":true,"results":{},"enabled":true,"fontSize":9,"tableHide":true},"settings":{"params":{},"forms":{}},"results":{"code":"ERROR","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"java.sql.SQLException: Query was cancelled\n\tat org.apache.hive.jdbc.HiveStatement.waitForOperationToComplete(HiveStatement.java:404)\n\tat org.apache.hive.jdbc.HiveStatement.execute(HiveStatement.java:276)\n\tat org.apache.commons.dbcp2.DelegatingStatement.execute(DelegatingStatement.java:291)\n\tat org.apache.commons.dbcp2.DelegatingStatement.execute(DelegatingStatement.java:291)\n\tat org.apache.zeppelin.jdbc.JDBCInterpreter.executeSql(JDBCInterpreter.java:737)\n\tat org.apache.zeppelin.jdbc.JDBCInterpreter.interpret(JDBCInterpreter.java:820)\n\tat org.apache.zeppelin.interpreter.LazyOpenInterpreter.interpret(LazyOpenInterpreter.java:103)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreterServer$InterpretJob.jobRun(RemoteInterpreterServer.java:632)\n\tat org.apache.zeppelin.scheduler.Job.run(Job.java:188)\n\tat org.apache.zeppelin.scheduler.ParallelScheduler$JobRunner.run(ParallelScheduler.java:162)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.access$201(ScheduledThreadPoolExecutor.java:180)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:293)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\n"}]},"apps":[],"jobName":"paragraph_1652465241676_1150301983","id":"20210729-110327_1212546579","dateCreated":"2022-05-13T15:07:21-0300","dateStarted":"2023-11-08T15:05:50-0300","dateFinished":"2023-11-08T15:05:56-0300","status":"ABORT","progressUpdateIntervalMs":500,"focus":true,"$$hashKey":"object:54"},{"title":"Idem parrafo anterior (2022 05 06)","text":"%jdbc(hive)\n\n/*Este parrafo replica el anterior pero reemplazando el filtro fl_terminal por unos analogos utilizando la fuente de AT_tac y los IMSIS del trafico*/\ndrop table sandbox_datascientist.jfp_imsis_trafico_01;\ncreate table sandbox_datascientist.jfp_imsis_trafico_01 stored as orc as\n\nselect * from (select ani, imsi, fecha, row_number() over (partition by ani order by fecha desc) as orden from trafico.comptel_xdr_consolidado a\nwhere fecha between date_format(date_sub(current_date,day(current_date)),'yyyyMM01') and date_format(date_sub(current_date,day(current_date)),'yyyyMMdd') ---------------------------------------------------------------------------------->Fecha\ngroup by ani, imsi, fecha)x where x.orden=1;\n\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_01;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_01 stored as orc as \n\nselect \na.*\nfrom sandbox.jg_tablero_terminales a\nleft join access_data.at_tacs_gsma_m b on a.tac_nr=b.tac_nr and b.periodo_nr=a.mes\nleft join sandbox_datascientist.jfp_imsis_trafico_01 c on a.ani=substring(c.ani,3,10)\nleft join ANALYTICS.off_xdr_mes_5_out_modoff d on a.ani=substring(d.ani,3,10)  and d.aniomes=a.mes\nwhere\na.mes= date_format(add_months(current_date,-1),'yyyyMM') -----------------------------------------------------------------------------------------------------------------CAMBIAR periodo\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so not in('actualizable', 'Obsoleto')\n--and a.fl_terminal in ('Mala configuracion')\nand b.banda_general_tx ='LTE Compatible'\nand substring(c.imsi,8,1) = '9'\nand d.mb_4g = 0\n;\n","user":"jpinelli","dateUpdated":"2024-03-28T20:36:31-0300","config":{"tableHide":false,"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","fontSize":9,"editorHide":false,"title":true,"results":{},"enabled":true},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 15916175"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 200718"}]},"apps":[],"jobName":"paragraph_1652465241736_-1531765174","id":"20220506-115539_565630932","dateCreated":"2022-05-13T15:07:21-0300","dateStarted":"2024-03-13T14:30:33-0300","dateFinished":"2024-03-13T14:42:46-0300","status":"FINISHED","progressUpdateIntervalMs":500,"$$hashKey":"object:55"},{"title":"Veo vive-trabaja-mayor","text":"%jdbc (hive)\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_02;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_02 stored as orc as \nselect \na.*,\ncase when a.cei_ind_experiencia_total_nr<70 then 1 else 0 end as fl_cei_70,\ncase when a.cei_ind_experiencia_total_nr<60 then 1 else 0 end as fl_cei_60,\ncase when a.mb_tot>=500 then 1 else 0 end fl_500_mb,\ncase when a.mb_tot>=1000 then 1 else 0 end fl_1_gb,\nb.base_cell_id as celda_mayor,\nb.dias_con_trafico_ca dias_trafico_mayor\nfrom sandbox_datascientist.jfp_terminales_mal_config_01 a\njoin elementos_red.indicador_cei_mensual_prevalencia b on a.ani=b.valor_recurso_primario_cd and a.mes=b.fecha_foto_id\n;\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_03;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_03 stored as orc as \nselect \na.*,\nc.base_cell_id as celda_trabaja,\nc.dias_con_trafico_ca dias_trafico_trabaja\nfrom sandbox_datascientist.jfp_terminales_mal_config_02 a\njoin elementos_red.indicador_cei_mensual_trabaja c on a.ani=c.valor_recurso_primario_cd and a.mes=c.fecha_foto_id\n;\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_04;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_04 stored as orc as \nselect \na.*,\nd.base_cell_id as celda_vive,\nd.dias_con_trafico_ca dias_trafico_vive\nfrom sandbox_datascientist.jfp_terminales_mal_config_03 a\njoin elementos_red.indicador_cei_mensual_vive d on a.ani=d.valor_recurso_primario_cd and a.mes=d.fecha_foto_id;","user":"jpinelli","dateUpdated":"2024-03-28T20:36:31-0300","config":{"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"fontSize":9,"title":true,"results":{},"enabled":true},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 153809"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 104871"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 93653"}]},"apps":[],"jobName":"paragraph_1652465241792_468945824","id":"20210729-110604_1630262707","dateCreated":"2022-05-13T15:07:21-0300","dateStarted":"2024-03-13T14:46:11-0300","dateFinished":"2024-03-13T14:52:54-0300","status":"FINISHED","progressUpdateIntervalMs":500,"$$hashKey":"object:56"},{"title":"Tecno de cada Sitio","text":"%jdbc(hive)\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_05;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_05 stored as orc as \nselect\nc.*\nfrom\n(select\nb.*,\nrow_number () over(partition by mes, id_celda order by fl_estado, fecha_de_estado desc) rnk\nfrom\n(select\na.*,\ncase when estado = 'Comercial' then 1\n     when estado = 'PruebasLTE' then 2\n     when estado = 'Swap' then 3\n     when estado = 'Integrado' then 4\n     when estado = 'Liberado' then 5\n     when estado = \"Planificado\" then 6\n     when estado = 'Des-definido' then 7\n     when estado = 'Baja' then 8\n     else 9\n     end fl_estado\nfrom\n(select\nsubstring(fecha, 1,6) as mes,\nid_celda,\nsector,\nestado,\nsitio,\nlatitud,\nlongitud,\nradio_de_cobertura,\naltura,\nazimuth,\napertura_horizontal,\nbanda_mhz,\ntipo_inst_sitio,\nlocalidad,\nprovincia,\ncabecera,\nregion,\nsubregion,\ntecnologia,\nfecha_de_estado\nfrom tableros.listado_celdas_sectores\nwhere fecha = date_format(date_sub(current_date,day(current_date)),'yyyyMMdd') ----------------------------------------------------------------------->>>>>>>>>>>>>>>>>>>>>>>>>>> ultimo dia mes \nand id_celda is not null) a) b) c\nwhere rnk = 1;\n\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_06;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_06 stored as orc as \nselect\nmes,\nsitio,\nsum (case when tecnologia='2G' then 1 else 0 end) fl_2G,\nsum (case when tecnologia='3G' then 1 else 0 end) fl_3G,\nsum (case when tecnologia='4G' then 1 else 0 end) fl_4G,\nsum (case when tecnologia='NULO' then 1 else 0 end) fl_nulo\nfrom sandbox_datascientist.jfp_terminales_mal_config_05\ngroup by mes,sitio\n;\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_07;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_07 stored as orc as\nselect\na.mes,\na.sitio,\n(case when a.sitio = 'indefinido' then '8. indefinido'\nwhen fl_2g>0 and fl_3g>0 and Fl_4g>0 then '1.Todos'\nwhen fl_2g=0 and fl_3g>0 and Fl_4G>0 then '2.3G y 4G'\nwhen fl_2g=0 and fl_3g=0 and Fl_4G>0 then '4.Solo 4G'\nwhen fl_2g>0 and fl_3g=0 and Fl_4G=0 then '7.Solo 2G'\nwhen fl_2g=0 and fl_3g>0 and Fl_4G=0 then '6.Solo 3G'\nwhen fl_2g>0 and fl_3g=0 and Fl_4G>0 then '3.2G y 4G'\nwhen fl_2g>0 and fl_3g>0 and Fl_4G=0 then '5.2G y 3G'\nelse 'ver' end) fl_sitio,\ncase when (b.sitio is null and d.sitio is null) then 0 else 1 end as fl_sitio_banda_4,\ncase when c.sitio is null then 0 else 1 end as fl_sitio_banda_2,\ncase when e.sitio is null then 0 else 1 end as fl_sitio_banda_7,\ncase when f.sitio is null then 0 else 1 end as fl_sitio_banda_28,\ncase when g.sitio is null then 0 else 1 end as fl_sitio_banda_5,\ncase when h.sitio is null then 0 else 1 end as fl_sitio_banda_2_5\nfrom sandbox_datascientist.jfp_terminales_mal_config_06 a\nleft join (select mes, sitio, count(sitio) as Q from sandbox_datascientist.jfp_terminales_mal_config_05 where banda_mhz ='1700/2100' group by mes,sitio)b  on a.sitio=b.sitio and a.mes=b.mes\nleft join (select mes, sitio, count(sitio) as Q from sandbox_datascientist.jfp_terminales_mal_config_05 where banda_mhz ='1900' group by mes,sitio)c  on a.sitio=c.sitio and a.mes=c.mes\nleft join (select mes, sitio, count(sitio) as Q from sandbox_datascientist.jfp_terminales_mal_config_05 where banda_mhz ='2100' group by mes,sitio)d  on a.sitio=d.sitio and a.mes=d.mes\nleft join (select mes, sitio, count(sitio) as Q from sandbox_datascientist.jfp_terminales_mal_config_05 where banda_mhz ='2600' group by mes,sitio)e  on a.sitio=e.sitio and a.mes=e.mes\nleft join (select mes, sitio, count(sitio) as Q from sandbox_datascientist.jfp_terminales_mal_config_05 where banda_mhz ='700' group by mes,sitio)f  on a.sitio=f.sitio and a.mes=f.mes\nleft join (select mes, sitio, count(sitio) as Q from sandbox_datascientist.jfp_terminales_mal_config_05 where banda_mhz ='850' group by mes,sitio)g  on a.sitio=g.sitio and a.mes=g.mes\nleft join (select mes, sitio, count(sitio) as Q from sandbox_datascientist.jfp_terminales_mal_config_05 where banda_mhz ='850/1900' group by mes,sitio)h  on a.sitio=h.sitio and a.mes=h.mes\n;","user":"jpinelli","dateUpdated":"2024-03-28T20:36:31-0300","config":{"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"fontSize":9,"title":true,"results":{},"enabled":true},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 124864"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 9011"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 9011"}]},"apps":[],"jobName":"paragraph_1652465241851_-372044296","id":"20210729-113008_688947367","dateCreated":"2022-05-13T15:07:21-0300","dateStarted":"2024-03-13T14:54:23-0300","dateFinished":"2024-03-13T14:56:04-0300","status":"FINISHED","progressUpdateIntervalMs":500,"$$hashKey":"object:57"},{"title":"Le pego la tecno de cada sitio por ani","text":"%jdbc (hive)\ndrop table sandbox_datascientist.jfp_terminales_mal_config_08;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_08 stored as orc as\nselect \na.*,\nd.sitio as sitio_mayor_vf,\nc.sitio as sitio_trabaja_vf,\nb.sitio as sitio_vive_vf\nfrom sandbox_datascientist.jfp_terminales_mal_config_04 a\nleft join sandbox_datascientist.jfp_terminales_mal_config_05 b on b.id_celda=a.celda_vive\nleft join sandbox_datascientist.jfp_terminales_mal_config_05 c on c.id_celda=a.celda_trabaja\nleft join sandbox_datascientist.jfp_terminales_mal_config_05 d on d.id_celda=a.celda_mayor\n;\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_09;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_09 stored as orc as\nselect \na.*,\nb.fl_sitio as fl_sitio_mayor_vf,\nc.fl_sitio as fl_sitio_vive_vf,\nd.fl_sitio as fl_sitio_trabaja_vf\nfrom sandbox_datascientist.jfp_terminales_mal_config_08 a\nleft join sandbox_datascientist.jfp_terminales_mal_config_07 b on b.sitio=a.sitio_mayor_vf\nleft join sandbox_datascientist.jfp_terminales_mal_config_07 c on c.sitio=a.sitio_trabaja_vf\nleft join sandbox_datascientist.jfp_terminales_mal_config_07 d on d.sitio=a.sitio_vive_vf\n;","user":"jpinelli","dateUpdated":"2024-03-28T20:36:31-0300","config":{"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"fontSize":9,"title":true,"results":{},"enabled":true},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 93653"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 93653"}]},"apps":[],"jobName":"paragraph_1652465241910_444609025","id":"20210729-152020_1300800694","dateCreated":"2022-05-13T15:07:21-0300","dateStarted":"2024-03-13T14:59:06-0300","dateFinished":"2024-03-13T14:59:45-0300","status":"FINISHED","progressUpdateIntervalMs":500,"$$hashKey":"object:58"},{"title":"Insert ","text":"%jdbc(hive)\n\nINSERT OVERWRITE table  sandbox.jg_terminales_mal_config\npartition (mes)\nselect \nani\t,\ntipo_cliente_de\t,\nsub_region_cnc_de\t,\nregion_cnc_de\t,\nlinea_negocio_cd\t,\nproducto_principal_de\t,\nproducto_oferta_cd\t,\nproducto_oferta_de\t,\nindicador_tem_cd\t,\ncorporacion_tx\t,\ntipo_documento_cd\t,\ntac_nr\t,\nimei_nr\t,\nimsi_nr\t,\nsim_lte_fl\t,\ntecnologia_equipo_tx\t,\nred_tx\t,\nrecarga_negocio_n0_mo\t,\nrecarga_negocio_n1_mo\t,\nrecarga_negocio_n2_mo\t,\nparque_recargador_90\t,\nproducto\t,\ncei_ind_experiencia_total_nr\t,\nfl_region\t,\nfl_navegador\t,\noperador\t,\nunidad_negocio\t,\nterminal\t,\nmb_4g\t,\nmb_3g\t,\nmb_2g\t,\nmb_ni\t,\nmb_tot\t,\nfl_terminal\t,\nfl_2m\t,\nversion_base_terminal\t,\nversion_tope_terminal\t,\ngama\t,\nfecha_primera_homologacion\t,\nversion_final\t,\nversion_num\t,\nversion_mayoritaria\t,\nfl_apple\t,\nfl_actualizable_android\t,\nfl_cater_android\t,\nfl_actualizable_apple\t,\nfl_actualizable_apple_ultimo_update\t,\nfl_cater_apple\t,\nfl_grupo_so\t,\nfl_grupo_accion\t,\nfl_caso_de_uso\t,\nbanda_02\t,\nbanda_04\t,\nbanda_05\t,\nbanda_07\t,\nbanda_08\t,\nbanda_28\t,\nporc_bandas_3g\t,\nporc_bandas_4g\t,\nfl_mayoritario_bandas_3g\t,\nsitio_vive\t,\nfl_sitio_vive\t,\nfl_sitio_banda_4_vive\t,\nfl_sitio_banda_2_vive\t,\nfl_sitio_banda_7_vive\t,\nfl_sitio_banda_28_vive\t,\nfl_sitio_banda_5_vive\t,\nfl_sitio_banda_2_5_vive\t,\nsitio_trabaja\t,\nfl_sitio_trabaja\t,\nfl_sitio_banda_4_trabaja\t,\nfl_sitio_banda_2_trabaja\t,\nfl_sitio_banda_7_trabaja\t,\nfl_sitio_banda_28_trabaja\t,\nfl_sitio_banda_5_trabaja\t,\nfl_sitio_banda_2_5_trabaja\t,\nsitio_mayor\t,\nfl_sitio_mayor\t,\nfl_sitio_banda_4_mayor\t,\nfl_sitio_banda_2_mayor\t,\nfl_sitio_banda_7_mayor\t,\nfl_sitio_banda_28_mayor\t,\nfl_sitio_banda_5_mayor\t,\nfl_sitio_banda_2_5_mayor\t,\nfl_total_so\t,\nfl_so_generico\t,\nfl_cei_70\t,\nfl_cei_60\t,\nfl_500_mb\t,\nfl_1_gb\t,\ncelda_mayor\t,\ndias_trafico_mayor\t,\ncelda_trabaja\t,\ndias_trafico_trabaja\t,\ncelda_vive\t,\ndias_trafico_vive\t,\nsitio_mayor_vf\t,\nsitio_trabaja_vf\t,\nsitio_vive_vf\t,\nfl_sitio_mayor_vf\t,\nfl_sitio_vive_vf\t,\nfl_sitio_trabaja_vf\t,\nmes\t\nfrom sandbox_datascientist.jfp_terminales_mal_config_09\nwhere (fl_caso_de_uso in('0') or fl_caso_de_uso is null )\nand fl_sitio_mayor_vf in ('1.Todos', '2.3G y 4G', '3.2G y 4G')\nand fl_sitio_trabaja_vf in ('1.Todos', '2.3G y 4G', '3.2G y 4G')\nand fl_sitio_vive_vf in ('1.Todos', '2.3G y 4G', '3.2G y 4G')\n;","user":"jpinelli","dateUpdated":"2024-03-28T20:36:31-0300","config":{"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","fontSize":9,"title":true,"results":{},"enabled":true,"editorHide":false},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : 84647"}]},"apps":[],"jobName":"paragraph_1652465242018_1916459143","id":"20210831-153319_1504088890","dateCreated":"2022-05-13T15:07:22-0300","dateStarted":"2024-03-13T14:59:58-0300","dateFinished":"2024-03-13T15:01:25-0300","status":"FINISHED","progressUpdateIntervalMs":500,"$$hashKey":"object:59"},{"title":"LIMPIEZA","text":"%jdbc (hive)\ndrop table sandbox_datascientist.jfp_terminales_mal_config_01;\ndrop table sandbox_datascientist.jfp_terminales_mal_config_02;\ndrop table sandbox_datascientist.jfp_terminales_mal_config_03;\ndrop table sandbox_datascientist.jfp_terminales_mal_config_04;\ndrop table sandbox_datascientist.jfp_terminales_mal_config_05;\ndrop table sandbox_datascientist.jfp_terminales_mal_config_06;\ndrop table sandbox_datascientist.jfp_terminales_mal_config_07;\ndrop table sandbox_datascientist.jfp_terminales_mal_config_08;\n\n","user":"jpinelli","dateUpdated":"2024-03-28T20:36:31-0300","config":{"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","title":true,"results":{},"enabled":true,"fontSize":9,"editorHide":false},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"}]},"apps":[],"jobName":"paragraph_1652465242071_-949238074","id":"20210831-154607_1612329323","dateCreated":"2022-05-13T15:07:22-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:60"},{"title":"Tabla Acumulada - No correr de nuevo","text":"%jdbc (hive)\n\ndrop table  sandbox.jg_terminales_mal_config ;\nCREATE TABLE sandbox.jg_terminales_mal_config\n(\nani\tstring\t,\ntipo_cliente_de\tstring\t,\nsub_region_cnc_de\tstring\t,\nregion_cnc_de\tstring\t,\nlinea_negocio_cd\tstring\t,\nproducto_principal_de\tstring\t,\nproducto_oferta_cd\tstring\t,\nproducto_oferta_de\tstring\t,\nindicador_tem_cd\tstring\t,\ncorporacion_tx\tstring\t,\ntipo_documento_cd\tstring\t,\ntac_nr\tstring\t,\nimei_nr\tstring\t,\nimsi_nr\tstring\t,\nsim_lte_fl\tstring\t,\ntecnologia_equipo_tx\tstring\t,\nred_tx\tstring\t,\nrecarga_negocio_n0_mo\tstring\t,\nrecarga_negocio_n1_mo\tstring\t,\nrecarga_negocio_n2_mo\tstring\t,\nparque_recargador_90\tstring\t,\nproducto\tstring\t,\ncei_ind_experiencia_total_nr\tstring\t,\nfl_region\tstring\t,\nfl_navegador\tstring\t,\noperador\tstring\t,\nunidad_negocio\tstring\t,\nterminal\tstring\t,\nmb_4g\tstring\t,\nmb_3g\tstring\t,\nmb_2g\tstring\t,\nmb_ni\tstring\t,\nmb_tot\tstring\t,\nfl_terminal\tstring\t,\nfl_2m\tstring\t,\nversion_base_terminal\tstring\t,\nversion_tope_terminal\tstring\t,\ngama\tstring\t,\nfecha_primera_homologacion\tstring\t,\nversion_final\tstring\t,\nversion_num\tstring\t,\nversion_mayoritaria\tstring\t,\nfl_apple\tstring\t,\nfl_actualizable_android\tstring\t,\nfl_cater_android\tstring\t,\nfl_actualizable_apple\tstring\t,\nfl_actualizable_apple_ultimo_update\tstring\t,\nfl_cater_apple\tstring\t,\nfl_grupo_so\tstring\t,\nfl_grupo_accion\tstring\t,\nfl_caso_de_uso\tstring\t,\nbanda_02\tstring\t,\nbanda_04\tstring\t,\nbanda_05\tstring\t,\nbanda_07\tstring\t,\nbanda_08\tstring\t,\nbanda_28\tstring\t,\nporc_bandas_3g\tstring\t,\nporc_bandas_4g\tstring\t,\nfl_mayoritario_bandas_3g\tstring\t,\nsitio_vive\tstring\t,\nfl_sitio_vive\tstring\t,\nfl_sitio_banda_4_vive\tstring\t,\nfl_sitio_banda_2_vive\tstring\t,\nfl_sitio_banda_7_vive\tstring\t,\nfl_sitio_banda_28_vive\tstring\t,\nfl_sitio_banda_5_vive\tstring\t,\nfl_sitio_banda_2_5_vive\tstring\t,\nsitio_trabaja\tstring\t,\nfl_sitio_trabaja\tstring\t,\nfl_sitio_banda_4_trabaja\tstring\t,\nfl_sitio_banda_2_trabaja\tstring\t,\nfl_sitio_banda_7_trabaja\tstring\t,\nfl_sitio_banda_28_trabaja\tstring\t,\nfl_sitio_banda_5_trabaja\tstring\t,\nfl_sitio_banda_2_5_trabaja\tstring\t,\nsitio_mayor\tstring\t,\nfl_sitio_mayor\tstring\t,\nfl_sitio_banda_4_mayor\tstring\t,\nfl_sitio_banda_2_mayor\tstring\t,\nfl_sitio_banda_7_mayor\tstring\t,\nfl_sitio_banda_28_mayor\tstring\t,\nfl_sitio_banda_5_mayor\tstring\t,\nfl_sitio_banda_2_5_mayor\tstring\t,\nfl_total_so\tstring\t,\nfl_so_generico\tstring\t,\nfl_cei_70\tint\t,\nfl_cei_60\tint\t,\nfl_500_mb\tint\t,\nfl_1_gb\tint\t,\ncelda_mayor\tstring\t,\ndias_trafico_mayor\tint\t,\ncelda_trabaja\tstring\t,\ndias_trafico_trabaja\tint\t,\ncelda_vive\tstring\t,\ndias_trafico_vive\tint\t,\nsitio_mayor_vf\tstring\t,\nsitio_trabaja_vf\tstring\t,\nsitio_vive_vf\tstring\t,\nfl_sitio_mayor_vf\tstring\t,\nfl_sitio_vive_vf\tstring\t,\nfl_sitio_trabaja_vf\tstring\t\n)\nPARTITIONED BY (mes string)\nCLUSTERED BY (ani) INTO 256 BUCKETS;\n","user":"jpinelli","dateUpdated":"2024-03-28T20:36:31-0300","config":{"tableHide":true,"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"title":true,"results":{},"enabled":false,"fontSize":9},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"}]},"apps":[],"jobName":"paragraph_1652465241963_1283127705","id":"20210831-153149_617941902","dateCreated":"2022-05-13T15:07:21-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:61"},{"title":"SALIDA para Reporte ","text":"%jdbc (hive)\n\nselect \ntipo_cliente_de,\nfl_region,\nfl_terminal,\nfl_cei_70,\nfl_cei_60,\nfl_500_mb,\nfl_1_gb,\nfl_sitio_mayor_vf,\nfl_sitio_vive_vf,\nfl_sitio_trabaja_vf,\ncount(1) as q_anis\nfrom sandbox_datascientist.jfp_terminales_mal_config_09\nwhere fl_caso_de_uso in('0') or fl_caso_de_uso is null \ngroup by \ntipo_cliente_de,\nfl_region,\nfl_terminal,\nfl_cei_70,\nfl_cei_60,\nfl_500_mb,\nfl_1_gb,\nfl_sitio_mayor_vf,\nfl_sitio_vive_vf,\nfl_sitio_trabaja_vf\n\n","user":"jpinelli","dateUpdated":"2024-03-28T20:36:31-0300","config":{"tableHide":true,"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"title":true,"results":{"0":{"graph":{"mode":"table","height":300,"optionOpen":false,"setting":{"table":{"tableGridState":{},"tableColumnTypeState":{"names":{"tipo_cliente_de":"string","fl_region":"string","fl_terminal":"string","fl_cei_70":"string","fl_cei_60":"string","fl_500_mb":"string","fl_1_gb":"string","fl_sitio_mayor_vf":"string","fl_sitio_vive_vf":"string","fl_sitio_trabaja_vf":"string","q_anis":"string"},"updated":false},"tableOptionSpecHash":"[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]","tableOptionValue":{"useFilter":false,"showPagination":false,"showAggregationFooter":false},"updated":false,"initialized":false}},"commonSetting":{}}}},"enabled":true,"fontSize":9},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TABLE","data":"tipo_cliente_de\tfl_region\tfl_terminal\tfl_cei_70\tfl_cei_60\tfl_500_mb\tfl_1_gb\tfl_sitio_mayor_vf\tfl_sitio_vive_vf\tfl_sitio_trabaja_vf\tq_anis\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t567\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t1.Todos\t1.Todos\t5.2G y 3G\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t1.Todos\t1.Todos\t6.Solo 3G\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t1.Todos\t2.3G y 4G\t2.3G y 4G\t31\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t1.Todos\t6.Solo 3G\t6.Solo 3G\t2\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t30\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t1.Todos\t36\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t5.2G y 3G\t5.2G y 3G\t5.2G y 3G\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t6.Solo 3G\t6.Solo 3G\t1.Todos\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t7.Solo 2G\t7.Solo 2G\t1.Todos\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t0\t1.Todos\t1.Todos\t2.3G y 4G\t12\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t0\t1.Todos\t3.2G y 4G\t1.Todos\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t0\t2.3G y 4G\t1.Todos\t1.Todos\t11\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t163\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t1\t1.Todos\t1.Todos\t1.Todos\t661\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t1\t1.Todos\t1.Todos\t6.Solo 3G\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t1\t1.Todos\t2.3G y 4G\t2.3G y 4G\t59\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t1\t2.3G y 4G\t2.3G y 4G\t3.2G y 4G\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t1\t2.3G y 4G\t7.Solo 2G\t2.3G y 4G\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t1\t6.Solo 3G\t2.3G y 4G\t6.Solo 3G\t2\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t1\t6.Solo 3G\t6.Solo 3G\t2.3G y 4G\t1\nEmpresa\tAMBA\tMala configuracion\t1\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t64\nEmpresa\tAMBA\tMala configuracion\t1\t0\t0\t0\t1.Todos\t2.3G y 4G\t2.3G y 4G\t6\nEmpresa\tAMBA\tMala configuracion\t1\t0\t0\t0\t1.Todos\t7.Solo 2G\t1.Todos\t1\nEmpresa\tAMBA\tMala configuracion\t1\t0\t0\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t3\nEmpresa\tAMBA\tMala configuracion\t1\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t33\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t0\t1.Todos\t1.Todos\t1.Todos\t9\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t0\t1.Todos\t1.Todos\t2.3G y 4G\t2\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t0\t1.Todos\t1.Todos\t6.Solo 3G\t1\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t0\t2.3G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t4\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t1.Todos\t1.Todos\t2.3G y 4G\t4\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t1.Todos\t2.3G y 4G\t2.3G y 4G\t9\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t2.3G y 4G\t1.Todos\t1.Todos\t8\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t2.3G y 4G\t1.Todos\t2.3G y 4G\t2\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t2.3G y 4G\t2.3G y 4G\t1.Todos\t3\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t2.3G y 4G\t7.Solo 2G\t7.Solo 2G\t1\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t7.Solo 2G\t1.Todos\t7.Solo 2G\t1\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t7.Solo 2G\t2.3G y 4G\t2.3G y 4G\t1\nEmpresa\tAMBA\tMala configuracion\t1\t1\t0\t0\t1.Todos\t1.Todos\t1.Todos\t80\nEmpresa\tAMBA\tMala configuracion\t1\t1\t0\t0\t3.2G y 4G\t3.2G y 4G\t3.2G y 4G\t1\nEmpresa\tAMBA\tMala configuracion\t1\t1\t0\t0\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t1\nEmpresa\tAMBA\tMala configuracion\t1\t1\t1\t1\t2.3G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tAMBA\tMala configuracion\t1\t1\t1\t1\t6.Solo 3G\t6.Solo 3G\t6.Solo 3G\t1\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t173\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t6\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t1.Todos\t1.Todos\t6.Solo 3G\t1\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t1.Todos\t2.3G y 4G\t1.Todos\t10\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t2.3G y 4G\t1.Todos\t1.Todos\t13\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t19\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t1.Todos\t11\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t156\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t3.2G y 4G\t3.2G y 4G\t3.2G y 4G\t1\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t1.Todos\t1.Todos\t2.3G y 4G\t6\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t1.Todos\t1.Todos\t6.Solo 3G\t1\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t1.Todos\t2.3G y 4G\t1.Todos\t4\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t1.Todos\t2.3G y 4G\t2.3G y 4G\t5\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t2.3G y 4G\t1.Todos\t1.Todos\t5\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t5.2G y 3G\t5.2G y 3G\t5.2G y 3G\t2\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t6.Solo 3G\t2.3G y 4G\t2.3G y 4G\t1\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t1\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t1\t1.Todos\t1.Todos\t1.Todos\t226\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t1\t1.Todos\t2.3G y 4G\t2.3G y 4G\t24\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t1\t2.3G y 4G\t1.Todos\t1.Todos\t15\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t1\t2.3G y 4G\t1.Todos\t2.3G y 4G\t24\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t1\t2.3G y 4G\t7.Solo 2G\t2.3G y 4G\t1\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t1\t6.Solo 3G\t6.Solo 3G\t1.Todos\t2\nEmpresa\tAMBA\tSin Usim\t1\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t19\nEmpresa\tAMBA\tSin Usim\t1\t0\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t1\nEmpresa\tAMBA\tSin Usim\t1\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t10\nEmpresa\tAMBA\tSin Usim\t1\t0\t1\t0\t1.Todos\t1.Todos\t1.Todos\t3\nEmpresa\tAMBA\tSin Usim\t1\t0\t1\t0\t1.Todos\t2.3G y 4G\t1.Todos\t1\nEmpresa\tAMBA\tSin Usim\t1\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t2\nEmpresa\tAMBA\tSin Usim\t1\t0\t1\t1\t1.Todos\t1.Todos\t1.Todos\t21\nEmpresa\tAMBA\tSin Usim\t1\t0\t1\t1\t1.Todos\t1.Todos\t2.3G y 4G\t1\nEmpresa\tAMBA\tSin Usim\t1\t0\t1\t1\t2.3G y 4G\t1.Todos\t1.Todos\t2\nEmpresa\tAMBA\tSin Usim\t1\t1\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t1\nEmpresa\tAMBA\tSin Usim\t1\t1\t0\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t1\nEmpresa\tAMBA\tSin Usim\t1\t1\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t2\nEmpresa\tAMBA\tSin Usim\t1\t1\t1\t0\t1.Todos\t1.Todos\t1.Todos\t3\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t5\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t0\t0\t1.Todos\t2.3G y 4G\t2.3G y 4G\t6\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t1.Todos\t1.Todos\t9\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t1.Todos\t8\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t26\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t0\t0\t6.Solo 3G\t6.Solo 3G\t6.Solo 3G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t0\t0\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t0\t1.Todos\t1.Todos\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t1\t1.Todos\t1.Todos\t6.Solo 3G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t1\t1.Todos\t2.3G y 4G\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t1\t2.3G y 4G\t1.Todos\t2.3G y 4G\t5\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t1\t2.3G y 4G\t2.3G y 4G\t1.Todos\t9\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t1\t6.Solo 3G\t1.Todos\t6.Solo 3G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t1\t6.Solo 3G\t6.Solo 3G\t6.Solo 3G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t1\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t101\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t0\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t0\t0\t6.Solo 3G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t0\t0\t6.Solo 3G\t7.Solo 2G\t6.Solo 3G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t0\t0\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t5\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t1.Todos\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t0\t3.2G y 4G\t3.2G y 4G\t3.2G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t0\t5.2G y 3G\t5.2G y 3G\t5.2G y 3G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t1\t2.3G y 4G\t1.Todos\t1.Todos\t2\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t1\t2.3G y 4G\t1.Todos\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t1\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t26\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t1\t3.2G y 4G\t3.2G y 4G\t3.2G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t1\t7.Solo 2G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t4\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t0\t0\t3.2G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t0\t0\t3.2G y 4G\t3.2G y 4G\t3.2G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t0\t0\t7.Solo 2G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t0\t1.Todos\t1.Todos\t1.Todos\t24\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t0\t1.Todos\t6.Solo 3G\t1.Todos\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t0\t3.2G y 4G\t3.2G y 4G\t3.2G y 4G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t0\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t3\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t1\t1.Todos\t1.Todos\t1.Todos\t40\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t1\t1.Todos\t2.3G y 4G\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t1\t1.Todos\t7.Solo 2G\t1.Todos\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t1\t2.3G y 4G\t1.Todos\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t1\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t3\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t73\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t0\t0\t2.3G y 4G\t1.Todos\t1.Todos\t2\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t7\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t0\t0\t2.3G y 4G\t7.Solo 2G\t1.Todos\t1\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t0\t1.Todos\t1.Todos\t1.Todos\t19\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t0\t1.Todos\t1.Todos\t2.3G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t0\t1.Todos\t1.Todos\t3.2G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t0\t2.3G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t1.Todos\t1\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t0\t6.Solo 3G\t6.Solo 3G\t6.Solo 3G\t2\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t1\t1.Todos\t1.Todos\t1.Todos\t59\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t1\t2.3G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t1\t2.3G y 4G\t1.Todos\t2.3G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t1\t2.3G y 4G\t2.3G y 4G\t1.Todos\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t39\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t0\t0\t1.Todos\t2.3G y 4G\t2.3G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t0\t0\t2.3G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t5\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t0\t0\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t0\t1.Todos\t1.Todos\t1.Todos\t16\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t0\t1.Todos\t1.Todos\t3.2G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t0\t3.2G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t1\t1.Todos\t1.Todos\t1.Todos\t46\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t1\t1.Todos\t1.Todos\t2.3G y 4G\t3\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t1\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t10\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t1\t3.2G y 4G\t3.2G y 4G\t3.2G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t1\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t2\nEmpresa\tINT-NORTE\tSin Usim\t1\t1\t0\t0\t1.Todos\t1.Todos\t1.Todos\t28\nEmpresa\tINT-NORTE\tSin Usim\t1\t1\t1\t0\t1.Todos\t1.Todos\t1.Todos\t5\nEmpresa\tINT-NORTE\tSin Usim\t1\t1\t1\t0\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t2\nEmpresa\tINT-NORTE\tSin Usim\t1\t1\t1\t1\t1.Todos\t1.Todos\t3.2G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t1\t1\t1\t2.3G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t465\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t21\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t1.Todos\t1.Todos\t7.Solo 2G\t2\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t1.Todos\t7.Solo 2G\t1.Todos\t2\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t1.Todos\t21\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t184\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t6.Solo 3G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t5.2G y 3G\t5.2G y 3G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t3.2G y 4G\t2.3G y 4G\t2.3G y 4G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t5.2G y 3G\t5.2G y 3G\t5.2G y 3G\t29\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t5.2G y 3G\t7.Solo 2G\t1.Todos\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t6.Solo 3G\t6.Solo 3G\t6.Solo 3G\t4\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t7.Solo 2G\t2.3G y 4G\t7.Solo 2G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t7.Solo 2G\t7.Solo 2G\t2.3G y 4G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t1.Todos\t1.Todos\t2.3G y 4G\t7\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t1.Todos\t2.3G y 4G\t1.Todos\t6\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t1.Todos\t2.3G y 4G\t2.3G y 4G\t8\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t2.3G y 4G\t1.Todos\t7.Solo 2G\t2\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t1.Todos\t2\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t54\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t6.Solo 3G\t6.Solo 3G\t6.Solo 3G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t7.Solo 2G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t1.Todos\t1.Todos\t2.3G y 4G\t21\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t1.Todos\t2.3G y 4G\t1.Todos\t20\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t1.Todos\t2.3G y 4G\t2.3G y 4G\t31\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t1.Todos\t5.2G y 3G\t1.Todos\t2\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t1.Todos\t7.Solo 2G\t7.Solo 2G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t2.3G y 4G\t2.3G y 4G\t1.Todos\t15\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t2.3G y 4G\t7.Solo 2G\t1.Todos\t3\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t5.2G y 3G\t5.2G y 3G\t5.2G y 3G\t2\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t6.Solo 3G\t2.3G y 4G\t1.Todos\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t7.Solo 2G\t1.Todos\t2.3G y 4G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t7.Solo 2G\t7.Solo 2G\t1.Todos\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t7\nEmpresa\tINT-SUR\tMala configuracion\t1\t0\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t6\nEmpresa\tINT-SUR\tMala configuracion\t1\t0\t0\t0\t1.Todos\t1.Todos\t5.2G y 3G\t1\nEmpresa\tINT-SUR\tMala configuracion\t1\t0\t0\t0\t1.Todos\t2.3G y 4G\t1.Todos\t12\nEmpresa\tINT-SUR\tMala configuracion\t1\t0\t0\t0\t1.Todos\t2.3G y 4G\t2.3G y 4G\t9\nEmpresa\tINT-SUR\tMala configuracion\t1\t0\t0\t0\t1.Todos\t5.2G y 3G\t5.2G y 3G\t1\nEmpresa\tINT-SUR\tMala configuracion\t1\t0\t0\t0\t2.3G y 4G\t1.Todos\t1.Todos\t9\nEmpresa\tINT-SUR\tMala configuracion\t1\t0\t0\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t18\n"},{"type":"HTML","data":"<div class=\"result-alert alert-warning\" role=\"alert\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button><strong>Output is truncated</strong> to 200 rows. Learn more about <strong>common.max_count</strong></div>"}]},"apps":[],"jobName":"paragraph_1652465242129_1273036748","id":"20210729-153823_940103801","dateCreated":"2022-05-13T15:07:22-0300","dateStarted":"2022-08-09T14:31:31-0300","dateFinished":"2022-08-09T14:31:48-0300","status":"FINISHED","progressUpdateIntervalMs":500,"$$hashKey":"object:62"},{"text":"%jdbc\n","user":"jpinelli","dateUpdated":"2024-03-28T20:36:31-0300","config":{"colWidth":12,"fontSize":9,"enabled":true,"results":{},"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"editorMode":"ace/mode/sql","editorHide":false},"settings":{"params":{},"forms":{}},"apps":[],"jobName":"paragraph_1660066290764_-144624782","id":"20220809-143130_1224567549","dateCreated":"2022-08-09T14:31:30-0300","status":"READY","progressUpdateIntervalMs":500,"$$hashKey":"object:63"}],"name":"JPinelli/TERMINALES/Term/5-Casuistica_MAL_CONFIGURADOS 1","id":"2H5B3ZEXN","noteParams":{},"noteForms":{},"angularObjects":{"angular:shared_process":[],"jdbc:shared_process":[],"sh:jpinelli:":[]},"config":{"isZeppelinNotebookCronEnable":false,"looknfeel":"default","personalizedMode":"false"},"info":{}}
+{
+  "paragraphs": [
+    {
+      "title": "Defino universo de mal configurados desde la tabla de casuisticas (tablero integral)",
+      "text": "%jdbc(hive)\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_01;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_01 stored as orc as \nselect \n*\nfrom sandbox.jg_tablero_terminales a\nwhere\na.mes=date_format(add_months(current_date,-1),'yyyyMM') -----------------------------------------------------------------------------------------------------------------CAMBIAR periodo\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so not in('actualizable', 'Obsoleto')\nand a.fl_terminal in ('Mala configuracion')\n;",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:31-0300",
+      "config": {
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "title": true,
+        "results": {},
+        "enabled": true,
+        "fontSize": 9,
+        "tableHide": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "ERROR",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "java.sql.SQLException: Query was cancelled\n\tat org.apache.hive.jdbc.HiveStatement.waitForOperationToComplete(HiveStatement.java:404)\n\tat org.apache.hive.jdbc.HiveStatement.execute(HiveStatement.java:276)\n\tat org.apache.commons.dbcp2.DelegatingStatement.execute(DelegatingStatement.java:291)\n\tat org.apache.commons.dbcp2.DelegatingStatement.execute(DelegatingStatement.java:291)\n\tat org.apache.zeppelin.jdbc.JDBCInterpreter.executeSql(JDBCInterpreter.java:737)\n\tat org.apache.zeppelin.jdbc.JDBCInterpreter.interpret(JDBCInterpreter.java:820)\n\tat org.apache.zeppelin.interpreter.LazyOpenInterpreter.interpret(LazyOpenInterpreter.java:103)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreterServer$InterpretJob.jobRun(RemoteInterpreterServer.java:632)\n\tat org.apache.zeppelin.scheduler.Job.run(Job.java:188)\n\tat org.apache.zeppelin.scheduler.ParallelScheduler$JobRunner.run(ParallelScheduler.java:162)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.access$201(ScheduledThreadPoolExecutor.java:180)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:293)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\n"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465241676_1150301983",
+      "id": "20210729-110327_1212546579",
+      "dateCreated": "2022-05-13T15:07:21-0300",
+      "dateStarted": "2023-11-08T15:05:50-0300",
+      "dateFinished": "2023-11-08T15:05:56-0300",
+      "status": "ABORT",
+      "progressUpdateIntervalMs": 500,
+      "focus": true,
+      "$$hashKey": "object:54"
+    },
+    {
+      "title": "Idem parrafo anterior (2022 05 06)",
+      "text": "%jdbc(hive)\n\n/*Este parrafo replica el anterior pero reemplazando el filtro fl_terminal por unos analogos utilizando la fuente de AT_tac y los IMSIS del trafico*/\ndrop table sandbox_datascientist.jfp_imsis_trafico_01;\ncreate table sandbox_datascientist.jfp_imsis_trafico_01 stored as orc as\n\nselect * from (select ani, imsi, fecha, row_number() over (partition by ani order by fecha desc) as orden from trafico.comptel_xdr_consolidado a\nwhere fecha between date_format(date_sub(current_date,day(current_date)),'yyyyMM01') and date_format(date_sub(current_date,day(current_date)),'yyyyMMdd') ---------------------------------------------------------------------------------->Fecha\ngroup by ani, imsi, fecha)x where x.orden=1;\n\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_01;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_01 stored as orc as \n\nselect \na.*\nfrom sandbox.jg_tablero_terminales a\nleft join access_data.at_tacs_gsma_m b on a.tac_nr=b.tac_nr and b.periodo_nr=a.mes\nleft join sandbox_datascientist.jfp_imsis_trafico_01 c on a.ani=substring(c.ani,3,10)\nleft join ANALYTICS.off_xdr_mes_5_out_modoff d on a.ani=substring(d.ani,3,10)  and d.aniomes=a.mes\nwhere\na.mes= date_format(add_months(current_date,-1),'yyyyMM') -----------------------------------------------------------------------------------------------------------------CAMBIAR periodo\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so not in('actualizable', 'Obsoleto')\n--and a.fl_terminal in ('Mala configuracion')\nand b.banda_general_tx ='LTE Compatible'\nand substring(c.imsi,8,1) = '9'\nand d.mb_4g = 0\n;\n",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:31-0300",
+      "config": {
+        "tableHide": false,
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "fontSize": 9,
+        "editorHide": false,
+        "title": true,
+        "results": {},
+        "enabled": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 15916175"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 200718"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465241736_-1531765174",
+      "id": "20220506-115539_565630932",
+      "dateCreated": "2022-05-13T15:07:21-0300",
+      "dateStarted": "2024-03-13T14:30:33-0300",
+      "dateFinished": "2024-03-13T14:42:46-0300",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:55"
+    },
+    {
+      "title": "Veo vive-trabaja-mayor",
+      "text": "%jdbc (hive)\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_02;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_02 stored as orc as \nselect \na.*,\ncase when a.cei_ind_experiencia_total_nr<70 then 1 else 0 end as fl_cei_70,\ncase when a.cei_ind_experiencia_total_nr<60 then 1 else 0 end as fl_cei_60,\ncase when a.mb_tot>=500 then 1 else 0 end fl_500_mb,\ncase when a.mb_tot>=1000 then 1 else 0 end fl_1_gb,\nb.base_cell_id as celda_mayor,\nb.dias_con_trafico_ca dias_trafico_mayor\nfrom sandbox_datascientist.jfp_terminales_mal_config_01 a\njoin elementos_red.indicador_cei_mensual_prevalencia b on a.ani=b.valor_recurso_primario_cd and a.mes=b.fecha_foto_id\n;\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_03;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_03 stored as orc as \nselect \na.*,\nc.base_cell_id as celda_trabaja,\nc.dias_con_trafico_ca dias_trafico_trabaja\nfrom sandbox_datascientist.jfp_terminales_mal_config_02 a\njoin elementos_red.indicador_cei_mensual_trabaja c on a.ani=c.valor_recurso_primario_cd and a.mes=c.fecha_foto_id\n;\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_04;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_04 stored as orc as \nselect \na.*,\nd.base_cell_id as celda_vive,\nd.dias_con_trafico_ca dias_trafico_vive\nfrom sandbox_datascientist.jfp_terminales_mal_config_03 a\njoin elementos_red.indicador_cei_mensual_vive d on a.ani=d.valor_recurso_primario_cd and a.mes=d.fecha_foto_id;",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:31-0300",
+      "config": {
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "fontSize": 9,
+        "title": true,
+        "results": {},
+        "enabled": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 153809"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 104871"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 93653"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465241792_468945824",
+      "id": "20210729-110604_1630262707",
+      "dateCreated": "2022-05-13T15:07:21-0300",
+      "dateStarted": "2024-03-13T14:46:11-0300",
+      "dateFinished": "2024-03-13T14:52:54-0300",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:56"
+    },
+    {
+      "title": "Tecno de cada Sitio",
+      "text": "%jdbc(hive)\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_05;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_05 stored as orc as \nselect\nc.*\nfrom\n(select\nb.*,\nrow_number () over(partition by mes, id_celda order by fl_estado, fecha_de_estado desc) rnk\nfrom\n(select\na.*,\ncase when estado = 'Comercial' then 1\n     when estado = 'PruebasLTE' then 2\n     when estado = 'Swap' then 3\n     when estado = 'Integrado' then 4\n     when estado = 'Liberado' then 5\n     when estado = \"Planificado\" then 6\n     when estado = 'Des-definido' then 7\n     when estado = 'Baja' then 8\n     else 9\n     end fl_estado\nfrom\n(select\nsubstring(fecha, 1,6) as mes,\nid_celda,\nsector,\nestado,\nsitio,\nlatitud,\nlongitud,\nradio_de_cobertura,\naltura,\nazimuth,\napertura_horizontal,\nbanda_mhz,\ntipo_inst_sitio,\nlocalidad,\nprovincia,\ncabecera,\nregion,\nsubregion,\ntecnologia,\nfecha_de_estado\nfrom tableros.listado_celdas_sectores\nwhere fecha = date_format(date_sub(current_date,day(current_date)),'yyyyMMdd') ----------------------------------------------------------------------->>>>>>>>>>>>>>>>>>>>>>>>>>> ultimo dia mes \nand id_celda is not null) a) b) c\nwhere rnk = 1;\n\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_06;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_06 stored as orc as \nselect\nmes,\nsitio,\nsum (case when tecnologia='2G' then 1 else 0 end) fl_2G,\nsum (case when tecnologia='3G' then 1 else 0 end) fl_3G,\nsum (case when tecnologia='4G' then 1 else 0 end) fl_4G,\nsum (case when tecnologia='NULO' then 1 else 0 end) fl_nulo\nfrom sandbox_datascientist.jfp_terminales_mal_config_05\ngroup by mes,sitio\n;\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_07;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_07 stored as orc as\nselect\na.mes,\na.sitio,\n(case when a.sitio = 'indefinido' then '8. indefinido'\nwhen fl_2g>0 and fl_3g>0 and Fl_4g>0 then '1.Todos'\nwhen fl_2g=0 and fl_3g>0 and Fl_4G>0 then '2.3G y 4G'\nwhen fl_2g=0 and fl_3g=0 and Fl_4G>0 then '4.Solo 4G'\nwhen fl_2g>0 and fl_3g=0 and Fl_4G=0 then '7.Solo 2G'\nwhen fl_2g=0 and fl_3g>0 and Fl_4G=0 then '6.Solo 3G'\nwhen fl_2g>0 and fl_3g=0 and Fl_4G>0 then '3.2G y 4G'\nwhen fl_2g>0 and fl_3g>0 and Fl_4G=0 then '5.2G y 3G'\nelse 'ver' end) fl_sitio,\ncase when (b.sitio is null and d.sitio is null) then 0 else 1 end as fl_sitio_banda_4,\ncase when c.sitio is null then 0 else 1 end as fl_sitio_banda_2,\ncase when e.sitio is null then 0 else 1 end as fl_sitio_banda_7,\ncase when f.sitio is null then 0 else 1 end as fl_sitio_banda_28,\ncase when g.sitio is null then 0 else 1 end as fl_sitio_banda_5,\ncase when h.sitio is null then 0 else 1 end as fl_sitio_banda_2_5\nfrom sandbox_datascientist.jfp_terminales_mal_config_06 a\nleft join (select mes, sitio, count(sitio) as Q from sandbox_datascientist.jfp_terminales_mal_config_05 where banda_mhz ='1700/2100' group by mes,sitio)b  on a.sitio=b.sitio and a.mes=b.mes\nleft join (select mes, sitio, count(sitio) as Q from sandbox_datascientist.jfp_terminales_mal_config_05 where banda_mhz ='1900' group by mes,sitio)c  on a.sitio=c.sitio and a.mes=c.mes\nleft join (select mes, sitio, count(sitio) as Q from sandbox_datascientist.jfp_terminales_mal_config_05 where banda_mhz ='2100' group by mes,sitio)d  on a.sitio=d.sitio and a.mes=d.mes\nleft join (select mes, sitio, count(sitio) as Q from sandbox_datascientist.jfp_terminales_mal_config_05 where banda_mhz ='2600' group by mes,sitio)e  on a.sitio=e.sitio and a.mes=e.mes\nleft join (select mes, sitio, count(sitio) as Q from sandbox_datascientist.jfp_terminales_mal_config_05 where banda_mhz ='700' group by mes,sitio)f  on a.sitio=f.sitio and a.mes=f.mes\nleft join (select mes, sitio, count(sitio) as Q from sandbox_datascientist.jfp_terminales_mal_config_05 where banda_mhz ='850' group by mes,sitio)g  on a.sitio=g.sitio and a.mes=g.mes\nleft join (select mes, sitio, count(sitio) as Q from sandbox_datascientist.jfp_terminales_mal_config_05 where banda_mhz ='850/1900' group by mes,sitio)h  on a.sitio=h.sitio and a.mes=h.mes\n;",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:31-0300",
+      "config": {
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "fontSize": 9,
+        "title": true,
+        "results": {},
+        "enabled": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 124864"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 9011"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 9011"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465241851_-372044296",
+      "id": "20210729-113008_688947367",
+      "dateCreated": "2022-05-13T15:07:21-0300",
+      "dateStarted": "2024-03-13T14:54:23-0300",
+      "dateFinished": "2024-03-13T14:56:04-0300",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:57"
+    },
+    {
+      "title": "Le pego la tecno de cada sitio por ani",
+      "text": "%jdbc (hive)\ndrop table sandbox_datascientist.jfp_terminales_mal_config_08;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_08 stored as orc as\nselect \na.*,\nd.sitio as sitio_mayor_vf,\nc.sitio as sitio_trabaja_vf,\nb.sitio as sitio_vive_vf\nfrom sandbox_datascientist.jfp_terminales_mal_config_04 a\nleft join sandbox_datascientist.jfp_terminales_mal_config_05 b on b.id_celda=a.celda_vive\nleft join sandbox_datascientist.jfp_terminales_mal_config_05 c on c.id_celda=a.celda_trabaja\nleft join sandbox_datascientist.jfp_terminales_mal_config_05 d on d.id_celda=a.celda_mayor\n;\n\ndrop table sandbox_datascientist.jfp_terminales_mal_config_09;\ncreate table sandbox_datascientist.jfp_terminales_mal_config_09 stored as orc as\nselect \na.*,\nb.fl_sitio as fl_sitio_mayor_vf,\nc.fl_sitio as fl_sitio_vive_vf,\nd.fl_sitio as fl_sitio_trabaja_vf\nfrom sandbox_datascientist.jfp_terminales_mal_config_08 a\nleft join sandbox_datascientist.jfp_terminales_mal_config_07 b on b.sitio=a.sitio_mayor_vf\nleft join sandbox_datascientist.jfp_terminales_mal_config_07 c on c.sitio=a.sitio_trabaja_vf\nleft join sandbox_datascientist.jfp_terminales_mal_config_07 d on d.sitio=a.sitio_vive_vf\n;",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:31-0300",
+      "config": {
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "fontSize": 9,
+        "title": true,
+        "results": {},
+        "enabled": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 93653"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 93653"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465241910_444609025",
+      "id": "20210729-152020_1300800694",
+      "dateCreated": "2022-05-13T15:07:21-0300",
+      "dateStarted": "2024-03-13T14:59:06-0300",
+      "dateFinished": "2024-03-13T14:59:45-0300",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:58"
+    },
+    {
+      "title": "Insert ",
+      "text": "%jdbc(hive)\n\nINSERT OVERWRITE table  sandbox.jg_terminales_mal_config\npartition (mes)\nselect \nani\t,\ntipo_cliente_de\t,\nsub_region_cnc_de\t,\nregion_cnc_de\t,\nlinea_negocio_cd\t,\nproducto_principal_de\t,\nproducto_oferta_cd\t,\nproducto_oferta_de\t,\nindicador_tem_cd\t,\ncorporacion_tx\t,\ntipo_documento_cd\t,\ntac_nr\t,\nimei_nr\t,\nimsi_nr\t,\nsim_lte_fl\t,\ntecnologia_equipo_tx\t,\nred_tx\t,\nrecarga_negocio_n0_mo\t,\nrecarga_negocio_n1_mo\t,\nrecarga_negocio_n2_mo\t,\nparque_recargador_90\t,\nproducto\t,\ncei_ind_experiencia_total_nr\t,\nfl_region\t,\nfl_navegador\t,\noperador\t,\nunidad_negocio\t,\nterminal\t,\nmb_4g\t,\nmb_3g\t,\nmb_2g\t,\nmb_ni\t,\nmb_tot\t,\nfl_terminal\t,\nfl_2m\t,\nversion_base_terminal\t,\nversion_tope_terminal\t,\ngama\t,\nfecha_primera_homologacion\t,\nversion_final\t,\nversion_num\t,\nversion_mayoritaria\t,\nfl_apple\t,\nfl_actualizable_android\t,\nfl_cater_android\t,\nfl_actualizable_apple\t,\nfl_actualizable_apple_ultimo_update\t,\nfl_cater_apple\t,\nfl_grupo_so\t,\nfl_grupo_accion\t,\nfl_caso_de_uso\t,\nbanda_02\t,\nbanda_04\t,\nbanda_05\t,\nbanda_07\t,\nbanda_08\t,\nbanda_28\t,\nporc_bandas_3g\t,\nporc_bandas_4g\t,\nfl_mayoritario_bandas_3g\t,\nsitio_vive\t,\nfl_sitio_vive\t,\nfl_sitio_banda_4_vive\t,\nfl_sitio_banda_2_vive\t,\nfl_sitio_banda_7_vive\t,\nfl_sitio_banda_28_vive\t,\nfl_sitio_banda_5_vive\t,\nfl_sitio_banda_2_5_vive\t,\nsitio_trabaja\t,\nfl_sitio_trabaja\t,\nfl_sitio_banda_4_trabaja\t,\nfl_sitio_banda_2_trabaja\t,\nfl_sitio_banda_7_trabaja\t,\nfl_sitio_banda_28_trabaja\t,\nfl_sitio_banda_5_trabaja\t,\nfl_sitio_banda_2_5_trabaja\t,\nsitio_mayor\t,\nfl_sitio_mayor\t,\nfl_sitio_banda_4_mayor\t,\nfl_sitio_banda_2_mayor\t,\nfl_sitio_banda_7_mayor\t,\nfl_sitio_banda_28_mayor\t,\nfl_sitio_banda_5_mayor\t,\nfl_sitio_banda_2_5_mayor\t,\nfl_total_so\t,\nfl_so_generico\t,\nfl_cei_70\t,\nfl_cei_60\t,\nfl_500_mb\t,\nfl_1_gb\t,\ncelda_mayor\t,\ndias_trafico_mayor\t,\ncelda_trabaja\t,\ndias_trafico_trabaja\t,\ncelda_vive\t,\ndias_trafico_vive\t,\nsitio_mayor_vf\t,\nsitio_trabaja_vf\t,\nsitio_vive_vf\t,\nfl_sitio_mayor_vf\t,\nfl_sitio_vive_vf\t,\nfl_sitio_trabaja_vf\t,\nmes\t\nfrom sandbox_datascientist.jfp_terminales_mal_config_09\nwhere (fl_caso_de_uso in('0') or fl_caso_de_uso is null )\nand fl_sitio_mayor_vf in ('1.Todos', '2.3G y 4G', '3.2G y 4G')\nand fl_sitio_trabaja_vf in ('1.Todos', '2.3G y 4G', '3.2G y 4G')\nand fl_sitio_vive_vf in ('1.Todos', '2.3G y 4G', '3.2G y 4G')\n;",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:31-0300",
+      "config": {
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "fontSize": 9,
+        "title": true,
+        "results": {},
+        "enabled": true,
+        "editorHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 84647"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465242018_1916459143",
+      "id": "20210831-153319_1504088890",
+      "dateCreated": "2022-05-13T15:07:22-0300",
+      "dateStarted": "2024-03-13T14:59:58-0300",
+      "dateFinished": "2024-03-13T15:01:25-0300",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:59"
+    },
+    {
+      "title": "LIMPIEZA",
+      "text": "%jdbc (hive)\ndrop table sandbox_datascientist.jfp_terminales_mal_config_01;\ndrop table sandbox_datascientist.jfp_terminales_mal_config_02;\ndrop table sandbox_datascientist.jfp_terminales_mal_config_03;\ndrop table sandbox_datascientist.jfp_terminales_mal_config_04;\ndrop table sandbox_datascientist.jfp_terminales_mal_config_05;\ndrop table sandbox_datascientist.jfp_terminales_mal_config_06;\ndrop table sandbox_datascientist.jfp_terminales_mal_config_07;\ndrop table sandbox_datascientist.jfp_terminales_mal_config_08;\n\n",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:31-0300",
+      "config": {
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "title": true,
+        "results": {},
+        "enabled": true,
+        "fontSize": 9,
+        "editorHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465242071_-949238074",
+      "id": "20210831-154607_1612329323",
+      "dateCreated": "2022-05-13T15:07:22-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:60"
+    },
+    {
+      "title": "Tabla Acumulada - No correr de nuevo",
+      "text": "%jdbc (hive)\n\ndrop table  sandbox.jg_terminales_mal_config ;\nCREATE TABLE sandbox.jg_terminales_mal_config\n(\nani\tstring\t,\ntipo_cliente_de\tstring\t,\nsub_region_cnc_de\tstring\t,\nregion_cnc_de\tstring\t,\nlinea_negocio_cd\tstring\t,\nproducto_principal_de\tstring\t,\nproducto_oferta_cd\tstring\t,\nproducto_oferta_de\tstring\t,\nindicador_tem_cd\tstring\t,\ncorporacion_tx\tstring\t,\ntipo_documento_cd\tstring\t,\ntac_nr\tstring\t,\nimei_nr\tstring\t,\nimsi_nr\tstring\t,\nsim_lte_fl\tstring\t,\ntecnologia_equipo_tx\tstring\t,\nred_tx\tstring\t,\nrecarga_negocio_n0_mo\tstring\t,\nrecarga_negocio_n1_mo\tstring\t,\nrecarga_negocio_n2_mo\tstring\t,\nparque_recargador_90\tstring\t,\nproducto\tstring\t,\ncei_ind_experiencia_total_nr\tstring\t,\nfl_region\tstring\t,\nfl_navegador\tstring\t,\noperador\tstring\t,\nunidad_negocio\tstring\t,\nterminal\tstring\t,\nmb_4g\tstring\t,\nmb_3g\tstring\t,\nmb_2g\tstring\t,\nmb_ni\tstring\t,\nmb_tot\tstring\t,\nfl_terminal\tstring\t,\nfl_2m\tstring\t,\nversion_base_terminal\tstring\t,\nversion_tope_terminal\tstring\t,\ngama\tstring\t,\nfecha_primera_homologacion\tstring\t,\nversion_final\tstring\t,\nversion_num\tstring\t,\nversion_mayoritaria\tstring\t,\nfl_apple\tstring\t,\nfl_actualizable_android\tstring\t,\nfl_cater_android\tstring\t,\nfl_actualizable_apple\tstring\t,\nfl_actualizable_apple_ultimo_update\tstring\t,\nfl_cater_apple\tstring\t,\nfl_grupo_so\tstring\t,\nfl_grupo_accion\tstring\t,\nfl_caso_de_uso\tstring\t,\nbanda_02\tstring\t,\nbanda_04\tstring\t,\nbanda_05\tstring\t,\nbanda_07\tstring\t,\nbanda_08\tstring\t,\nbanda_28\tstring\t,\nporc_bandas_3g\tstring\t,\nporc_bandas_4g\tstring\t,\nfl_mayoritario_bandas_3g\tstring\t,\nsitio_vive\tstring\t,\nfl_sitio_vive\tstring\t,\nfl_sitio_banda_4_vive\tstring\t,\nfl_sitio_banda_2_vive\tstring\t,\nfl_sitio_banda_7_vive\tstring\t,\nfl_sitio_banda_28_vive\tstring\t,\nfl_sitio_banda_5_vive\tstring\t,\nfl_sitio_banda_2_5_vive\tstring\t,\nsitio_trabaja\tstring\t,\nfl_sitio_trabaja\tstring\t,\nfl_sitio_banda_4_trabaja\tstring\t,\nfl_sitio_banda_2_trabaja\tstring\t,\nfl_sitio_banda_7_trabaja\tstring\t,\nfl_sitio_banda_28_trabaja\tstring\t,\nfl_sitio_banda_5_trabaja\tstring\t,\nfl_sitio_banda_2_5_trabaja\tstring\t,\nsitio_mayor\tstring\t,\nfl_sitio_mayor\tstring\t,\nfl_sitio_banda_4_mayor\tstring\t,\nfl_sitio_banda_2_mayor\tstring\t,\nfl_sitio_banda_7_mayor\tstring\t,\nfl_sitio_banda_28_mayor\tstring\t,\nfl_sitio_banda_5_mayor\tstring\t,\nfl_sitio_banda_2_5_mayor\tstring\t,\nfl_total_so\tstring\t,\nfl_so_generico\tstring\t,\nfl_cei_70\tint\t,\nfl_cei_60\tint\t,\nfl_500_mb\tint\t,\nfl_1_gb\tint\t,\ncelda_mayor\tstring\t,\ndias_trafico_mayor\tint\t,\ncelda_trabaja\tstring\t,\ndias_trafico_trabaja\tint\t,\ncelda_vive\tstring\t,\ndias_trafico_vive\tint\t,\nsitio_mayor_vf\tstring\t,\nsitio_trabaja_vf\tstring\t,\nsitio_vive_vf\tstring\t,\nfl_sitio_mayor_vf\tstring\t,\nfl_sitio_vive_vf\tstring\t,\nfl_sitio_trabaja_vf\tstring\t\n)\nPARTITIONED BY (mes string)\nCLUSTERED BY (ani) INTO 256 BUCKETS;\n",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:31-0300",
+      "config": {
+        "tableHide": true,
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "title": true,
+        "results": {},
+        "enabled": false,
+        "fontSize": 9
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465241963_1283127705",
+      "id": "20210831-153149_617941902",
+      "dateCreated": "2022-05-13T15:07:21-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:61"
+    },
+    {
+      "title": "SALIDA para Reporte ",
+      "text": "%jdbc (hive)\n\nselect \ntipo_cliente_de,\nfl_region,\nfl_terminal,\nfl_cei_70,\nfl_cei_60,\nfl_500_mb,\nfl_1_gb,\nfl_sitio_mayor_vf,\nfl_sitio_vive_vf,\nfl_sitio_trabaja_vf,\ncount(1) as q_anis\nfrom sandbox_datascientist.jfp_terminales_mal_config_09\nwhere fl_caso_de_uso in('0') or fl_caso_de_uso is null \ngroup by \ntipo_cliente_de,\nfl_region,\nfl_terminal,\nfl_cei_70,\nfl_cei_60,\nfl_500_mb,\nfl_1_gb,\nfl_sitio_mayor_vf,\nfl_sitio_vive_vf,\nfl_sitio_trabaja_vf\n\n",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:31-0300",
+      "config": {
+        "tableHide": true,
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "title": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "table",
+              "height": 300,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {},
+                  "tableColumnTypeState": {
+                    "names": {
+                      "tipo_cliente_de": "string",
+                      "fl_region": "string",
+                      "fl_terminal": "string",
+                      "fl_cei_70": "string",
+                      "fl_cei_60": "string",
+                      "fl_500_mb": "string",
+                      "fl_1_gb": "string",
+                      "fl_sitio_mayor_vf": "string",
+                      "fl_sitio_vive_vf": "string",
+                      "fl_sitio_trabaja_vf": "string",
+                      "q_anis": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                }
+              },
+              "commonSetting": {}
+            }
+          }
+        },
+        "enabled": true,
+        "fontSize": 9
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TABLE",
+            "data": "tipo_cliente_de\tfl_region\tfl_terminal\tfl_cei_70\tfl_cei_60\tfl_500_mb\tfl_1_gb\tfl_sitio_mayor_vf\tfl_sitio_vive_vf\tfl_sitio_trabaja_vf\tq_anis\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t567\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t1.Todos\t1.Todos\t5.2G y 3G\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t1.Todos\t1.Todos\t6.Solo 3G\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t1.Todos\t2.3G y 4G\t2.3G y 4G\t31\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t1.Todos\t6.Solo 3G\t6.Solo 3G\t2\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t30\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t1.Todos\t36\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t5.2G y 3G\t5.2G y 3G\t5.2G y 3G\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t6.Solo 3G\t6.Solo 3G\t1.Todos\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t0\t0\t7.Solo 2G\t7.Solo 2G\t1.Todos\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t0\t1.Todos\t1.Todos\t2.3G y 4G\t12\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t0\t1.Todos\t3.2G y 4G\t1.Todos\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t0\t2.3G y 4G\t1.Todos\t1.Todos\t11\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t163\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t1\t1.Todos\t1.Todos\t1.Todos\t661\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t1\t1.Todos\t1.Todos\t6.Solo 3G\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t1\t1.Todos\t2.3G y 4G\t2.3G y 4G\t59\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t1\t2.3G y 4G\t2.3G y 4G\t3.2G y 4G\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t1\t2.3G y 4G\t7.Solo 2G\t2.3G y 4G\t1\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t1\t6.Solo 3G\t2.3G y 4G\t6.Solo 3G\t2\nEmpresa\tAMBA\tMala configuracion\t0\t0\t1\t1\t6.Solo 3G\t6.Solo 3G\t2.3G y 4G\t1\nEmpresa\tAMBA\tMala configuracion\t1\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t64\nEmpresa\tAMBA\tMala configuracion\t1\t0\t0\t0\t1.Todos\t2.3G y 4G\t2.3G y 4G\t6\nEmpresa\tAMBA\tMala configuracion\t1\t0\t0\t0\t1.Todos\t7.Solo 2G\t1.Todos\t1\nEmpresa\tAMBA\tMala configuracion\t1\t0\t0\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t3\nEmpresa\tAMBA\tMala configuracion\t1\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t33\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t0\t1.Todos\t1.Todos\t1.Todos\t9\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t0\t1.Todos\t1.Todos\t2.3G y 4G\t2\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t0\t1.Todos\t1.Todos\t6.Solo 3G\t1\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t0\t2.3G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t4\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t1.Todos\t1.Todos\t2.3G y 4G\t4\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t1.Todos\t2.3G y 4G\t2.3G y 4G\t9\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t2.3G y 4G\t1.Todos\t1.Todos\t8\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t2.3G y 4G\t1.Todos\t2.3G y 4G\t2\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t2.3G y 4G\t2.3G y 4G\t1.Todos\t3\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t2.3G y 4G\t7.Solo 2G\t7.Solo 2G\t1\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t7.Solo 2G\t1.Todos\t7.Solo 2G\t1\nEmpresa\tAMBA\tMala configuracion\t1\t0\t1\t1\t7.Solo 2G\t2.3G y 4G\t2.3G y 4G\t1\nEmpresa\tAMBA\tMala configuracion\t1\t1\t0\t0\t1.Todos\t1.Todos\t1.Todos\t80\nEmpresa\tAMBA\tMala configuracion\t1\t1\t0\t0\t3.2G y 4G\t3.2G y 4G\t3.2G y 4G\t1\nEmpresa\tAMBA\tMala configuracion\t1\t1\t0\t0\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t1\nEmpresa\tAMBA\tMala configuracion\t1\t1\t1\t1\t2.3G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tAMBA\tMala configuracion\t1\t1\t1\t1\t6.Solo 3G\t6.Solo 3G\t6.Solo 3G\t1\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t173\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t6\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t1.Todos\t1.Todos\t6.Solo 3G\t1\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t1.Todos\t2.3G y 4G\t1.Todos\t10\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t2.3G y 4G\t1.Todos\t1.Todos\t13\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t19\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t1.Todos\t11\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t156\nEmpresa\tAMBA\tSin Usim\t0\t0\t0\t0\t3.2G y 4G\t3.2G y 4G\t3.2G y 4G\t1\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t1.Todos\t1.Todos\t2.3G y 4G\t6\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t1.Todos\t1.Todos\t6.Solo 3G\t1\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t1.Todos\t2.3G y 4G\t1.Todos\t4\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t1.Todos\t2.3G y 4G\t2.3G y 4G\t5\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t2.3G y 4G\t1.Todos\t1.Todos\t5\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t5.2G y 3G\t5.2G y 3G\t5.2G y 3G\t2\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t6.Solo 3G\t2.3G y 4G\t2.3G y 4G\t1\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t0\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t1\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t1\t1.Todos\t1.Todos\t1.Todos\t226\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t1\t1.Todos\t2.3G y 4G\t2.3G y 4G\t24\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t1\t2.3G y 4G\t1.Todos\t1.Todos\t15\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t1\t2.3G y 4G\t1.Todos\t2.3G y 4G\t24\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t1\t2.3G y 4G\t7.Solo 2G\t2.3G y 4G\t1\nEmpresa\tAMBA\tSin Usim\t0\t0\t1\t1\t6.Solo 3G\t6.Solo 3G\t1.Todos\t2\nEmpresa\tAMBA\tSin Usim\t1\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t19\nEmpresa\tAMBA\tSin Usim\t1\t0\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t1\nEmpresa\tAMBA\tSin Usim\t1\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t10\nEmpresa\tAMBA\tSin Usim\t1\t0\t1\t0\t1.Todos\t1.Todos\t1.Todos\t3\nEmpresa\tAMBA\tSin Usim\t1\t0\t1\t0\t1.Todos\t2.3G y 4G\t1.Todos\t1\nEmpresa\tAMBA\tSin Usim\t1\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t2\nEmpresa\tAMBA\tSin Usim\t1\t0\t1\t1\t1.Todos\t1.Todos\t1.Todos\t21\nEmpresa\tAMBA\tSin Usim\t1\t0\t1\t1\t1.Todos\t1.Todos\t2.3G y 4G\t1\nEmpresa\tAMBA\tSin Usim\t1\t0\t1\t1\t2.3G y 4G\t1.Todos\t1.Todos\t2\nEmpresa\tAMBA\tSin Usim\t1\t1\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t1\nEmpresa\tAMBA\tSin Usim\t1\t1\t0\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t1\nEmpresa\tAMBA\tSin Usim\t1\t1\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t2\nEmpresa\tAMBA\tSin Usim\t1\t1\t1\t0\t1.Todos\t1.Todos\t1.Todos\t3\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t5\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t0\t0\t1.Todos\t2.3G y 4G\t2.3G y 4G\t6\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t1.Todos\t1.Todos\t9\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t1.Todos\t8\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t26\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t0\t0\t6.Solo 3G\t6.Solo 3G\t6.Solo 3G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t0\t0\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t0\t1.Todos\t1.Todos\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t1\t1.Todos\t1.Todos\t6.Solo 3G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t1\t1.Todos\t2.3G y 4G\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t1\t2.3G y 4G\t1.Todos\t2.3G y 4G\t5\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t1\t2.3G y 4G\t2.3G y 4G\t1.Todos\t9\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t1\t6.Solo 3G\t1.Todos\t6.Solo 3G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t1\t6.Solo 3G\t6.Solo 3G\t6.Solo 3G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t0\t0\t1\t1\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t101\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t0\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t0\t0\t6.Solo 3G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t0\t0\t6.Solo 3G\t7.Solo 2G\t6.Solo 3G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t0\t0\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t5\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t1.Todos\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t0\t3.2G y 4G\t3.2G y 4G\t3.2G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t0\t5.2G y 3G\t5.2G y 3G\t5.2G y 3G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t1\t2.3G y 4G\t1.Todos\t1.Todos\t2\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t1\t2.3G y 4G\t1.Todos\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t1\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t26\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t1\t3.2G y 4G\t3.2G y 4G\t3.2G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t1\t0\t1\t1\t7.Solo 2G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t4\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t0\t0\t3.2G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t0\t0\t3.2G y 4G\t3.2G y 4G\t3.2G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t0\t0\t7.Solo 2G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t0\t1.Todos\t1.Todos\t1.Todos\t24\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t0\t1.Todos\t6.Solo 3G\t1.Todos\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t0\t3.2G y 4G\t3.2G y 4G\t3.2G y 4G\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t0\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t3\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t1\t1.Todos\t1.Todos\t1.Todos\t40\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t1\t1.Todos\t2.3G y 4G\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t1\t1.Todos\t7.Solo 2G\t1.Todos\t1\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t1\t2.3G y 4G\t1.Todos\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tMala configuracion\t1\t1\t1\t1\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t3\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t73\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t0\t0\t2.3G y 4G\t1.Todos\t1.Todos\t2\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t7\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t0\t0\t2.3G y 4G\t7.Solo 2G\t1.Todos\t1\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t0\t1.Todos\t1.Todos\t1.Todos\t19\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t0\t1.Todos\t1.Todos\t2.3G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t0\t1.Todos\t1.Todos\t3.2G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t0\t2.3G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t1.Todos\t1\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t2\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t0\t6.Solo 3G\t6.Solo 3G\t6.Solo 3G\t2\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t1\t1.Todos\t1.Todos\t1.Todos\t59\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t1\t2.3G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t1\t2.3G y 4G\t1.Todos\t2.3G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t0\t0\t1\t1\t2.3G y 4G\t2.3G y 4G\t1.Todos\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t39\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t0\t0\t1.Todos\t2.3G y 4G\t2.3G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t0\t0\t2.3G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t5\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t0\t0\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t0\t1.Todos\t1.Todos\t1.Todos\t16\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t0\t1.Todos\t1.Todos\t3.2G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t0\t3.2G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t1\t1.Todos\t1.Todos\t1.Todos\t46\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t1\t1.Todos\t1.Todos\t2.3G y 4G\t3\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t1\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t10\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t1\t3.2G y 4G\t3.2G y 4G\t3.2G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t0\t1\t1\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t2\nEmpresa\tINT-NORTE\tSin Usim\t1\t1\t0\t0\t1.Todos\t1.Todos\t1.Todos\t28\nEmpresa\tINT-NORTE\tSin Usim\t1\t1\t1\t0\t1.Todos\t1.Todos\t1.Todos\t5\nEmpresa\tINT-NORTE\tSin Usim\t1\t1\t1\t0\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t2\nEmpresa\tINT-NORTE\tSin Usim\t1\t1\t1\t1\t1.Todos\t1.Todos\t3.2G y 4G\t1\nEmpresa\tINT-NORTE\tSin Usim\t1\t1\t1\t1\t2.3G y 4G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t1.Todos\t1.Todos\t1.Todos\t465\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t21\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t1.Todos\t1.Todos\t7.Solo 2G\t2\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t1.Todos\t7.Solo 2G\t1.Todos\t2\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t1.Todos\t21\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t184\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t2.3G y 4G\t6.Solo 3G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t2.3G y 4G\t5.2G y 3G\t5.2G y 3G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t3.2G y 4G\t2.3G y 4G\t2.3G y 4G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t5.2G y 3G\t5.2G y 3G\t5.2G y 3G\t29\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t5.2G y 3G\t7.Solo 2G\t1.Todos\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t6.Solo 3G\t6.Solo 3G\t6.Solo 3G\t4\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t7.Solo 2G\t2.3G y 4G\t7.Solo 2G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t0\t0\t7.Solo 2G\t7.Solo 2G\t2.3G y 4G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t1.Todos\t1.Todos\t2.3G y 4G\t7\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t1.Todos\t2.3G y 4G\t1.Todos\t6\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t1.Todos\t2.3G y 4G\t2.3G y 4G\t8\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t2.3G y 4G\t1.Todos\t7.Solo 2G\t2\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t1.Todos\t2\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t2.3G y 4G\t2.3G y 4G\t2.3G y 4G\t54\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t6.Solo 3G\t6.Solo 3G\t6.Solo 3G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t0\t7.Solo 2G\t1.Todos\t1.Todos\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t1.Todos\t1.Todos\t2.3G y 4G\t21\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t1.Todos\t2.3G y 4G\t1.Todos\t20\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t1.Todos\t2.3G y 4G\t2.3G y 4G\t31\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t1.Todos\t5.2G y 3G\t1.Todos\t2\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t1.Todos\t7.Solo 2G\t7.Solo 2G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t2.3G y 4G\t2.3G y 4G\t1.Todos\t15\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t2.3G y 4G\t7.Solo 2G\t1.Todos\t3\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t5.2G y 3G\t5.2G y 3G\t5.2G y 3G\t2\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t6.Solo 3G\t2.3G y 4G\t1.Todos\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t7.Solo 2G\t1.Todos\t2.3G y 4G\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t7.Solo 2G\t7.Solo 2G\t1.Todos\t1\nEmpresa\tINT-SUR\tMala configuracion\t0\t0\t1\t1\t7.Solo 2G\t7.Solo 2G\t7.Solo 2G\t7\nEmpresa\tINT-SUR\tMala configuracion\t1\t0\t0\t0\t1.Todos\t1.Todos\t2.3G y 4G\t6\nEmpresa\tINT-SUR\tMala configuracion\t1\t0\t0\t0\t1.Todos\t1.Todos\t5.2G y 3G\t1\nEmpresa\tINT-SUR\tMala configuracion\t1\t0\t0\t0\t1.Todos\t2.3G y 4G\t1.Todos\t12\nEmpresa\tINT-SUR\tMala configuracion\t1\t0\t0\t0\t1.Todos\t2.3G y 4G\t2.3G y 4G\t9\nEmpresa\tINT-SUR\tMala configuracion\t1\t0\t0\t0\t1.Todos\t5.2G y 3G\t5.2G y 3G\t1\nEmpresa\tINT-SUR\tMala configuracion\t1\t0\t0\t0\t2.3G y 4G\t1.Todos\t1.Todos\t9\nEmpresa\tINT-SUR\tMala configuracion\t1\t0\t0\t0\t2.3G y 4G\t1.Todos\t2.3G y 4G\t18\n"
+          },
+          {
+            "type": "HTML",
+            "data": "<div class=\"result-alert alert-warning\" role=\"alert\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button><strong>Output is truncated</strong> to 200 rows. Learn more about <strong>common.max_count</strong></div>"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465242129_1273036748",
+      "id": "20210729-153823_940103801",
+      "dateCreated": "2022-05-13T15:07:22-0300",
+      "dateStarted": "2022-08-09T14:31:31-0300",
+      "dateFinished": "2022-08-09T14:31:48-0300",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:62"
+    },
+    {
+      "text": "%jdbc\n",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:31-0300",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 9,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "editorMode": "ace/mode/sql",
+        "editorHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1660066290764_-144624782",
+      "id": "20220809-143130_1224567549",
+      "dateCreated": "2022-08-09T14:31:30-0300",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:63"
+    }
+  ],
+  "name": "JPinelli/TERMINALES/Term/5-Casuistica_MAL_CONFIGURADOS 1",
+  "id": "2H5B3ZEXN",
+  "noteParams": {},
+  "noteForms": {},
+  "angularObjects": {
+    "angular:shared_process": [],
+    "jdbc:shared_process": [],
+    "sh:jpinelli:": []
+  },
+  "config": {
+    "isZeppelinNotebookCronEnable": false,
+    "looknfeel": "default",
+    "personalizedMode": "false"
+  },
+  "info": {}
+}

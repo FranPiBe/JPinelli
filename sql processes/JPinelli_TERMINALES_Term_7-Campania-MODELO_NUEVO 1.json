@@ -1,1 +1,750 @@
-﻿{"paragraphs":[{"title":"TABLA PARA BONO 5GB","text":"%jdbc (hive)\ndrop table sandbox_datascientist.jfp_campania_terminales_anis_bono_01;\ncreate table sandbox_datascientist.jfp_campania_terminales_anis_bono_01 stored as orc as \nselect x.ani as ani from(\nselect  \na.ani,\ncase when b.ani is null then 0 else 1 end as fl_ok\nfrom sandbox.jg_seguimiento_campanias_seguimiento_out a\nleft join \n(select distinct ani from sandbox.jg_seguimiento_campanias_seguimiento_out where fl_campania_so=1 and mes_base=date_format(add_months(current_date,-3),'yyyyMM'))b on a.ani=b.ani --###que no esté en bases anteriores para no repetir el beneficio\n\nwhere a.fl_campania_so=1 and a.mes_base=date_format(add_months(current_date,-2),'yyyyMM')\n)x where x.fl_ok=0\n;","user":"jpinelli","dateUpdated":"2024-03-28T20:36:05-0300","config":{"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","fontSize":9,"title":true,"results":{},"enabled":true,"editorHide":false},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 102938"}]},"apps":[],"jobName":"paragraph_1652465262427_221596543","id":"20210610-151629_78858807","dateCreated":"2022-05-13T15:07:42-0300","dateStarted":"2024-03-13T15:16:56-0300","dateFinished":"2024-03-13T15:21:09-0300","status":"FINISHED","progressUpdateIntervalMs":500,"focus":true,"$$hashKey":"object:54"},{"title":"Salida para campaña NUEVO (Dic21) --> Tablas a ABT no gobernada b2b b2c","text":"%jdbc(hive)\n/* ng_hd_var08_fl */ --Flag que indica si el suscriptor aplica a campaña de actualización SO Android Mesa Terminales\n\ninsert overwrite table sandbox.jg_campania_terminales_actualizacion_android\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\n--------------------Modificacion 6/4/22-----------------------------------------------\n--join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr cambiar por at_parque\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\n--------------------------------------------------------------------------------------\nwhere\na.mes=date_format(add_months(current_date,-1),'yyyyMM')\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so='actualizable'\nand fl_apple=0\n)x where x.orden=1\n;\n\n/* ng_hd_var09_fl */--Flag que indica si el suscriptor aplica a campaña de actualización SO IOS Mesa Terminales\ninsert overwrite table sandbox.jg_campania_terminales_actualizacion_ios\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\n--------------------Modificacion 6/4/22-----------------------------------------------\n--join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr cambiar por at_parque\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\n--------------------------------------------------------------------------------------\n--a.mes=b.periodo_nr\nwhere \na.mes=date_format(add_months(current_date,-1),'yyyyMM')\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so='actualizable'\nand fl_apple=1\n)x where x.orden=1\n;\n\n/* ng_hd_var10_fl */ --Flag que indica si el suscriptor aplica a campaña de cater IOS Mesa Terminales\ninsert overwrite table sandbox.jg_campania_terminales_cater_ios\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\n--------------------Modificacion 6/4/22-----------------------------------------------\n--join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr cambiar por at_parque\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\n--------------------------------------------------------------------------------------\nwhere \na.mes=date_format(add_months(current_date,-1),'yyyyMM')\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so='Obsoleto'\nand fl_apple=1\n)x where x.orden=1\n;\n\n/* ng_hd_var11_fl */ --Flag que indica si el suscriptor aplica a campaña de cater Android Mesa Terminales\ninsert overwrite table sandbox.jg_campania_terminales_cater_android\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\n--------------------Modificacion 6/4/22-----------------------------------------------\n--join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr cambiar por at_parque\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\n--------------------------------------------------------------------------------------\nwhere \na.mes=date_format(add_months(current_date,-1),'yyyyMM')\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand ((a.fl_total_so='Obsoleto' and fl_apple=0)\n--or (fl_total_so='SO no identificado' and fl_so_generico in ('Firefox', 'Proprietary', 'Other', 'BlackBerry', 'Windows Phone', 'Windows Mobile', 'Tizen', 'Android'))\n)\n)x where x.orden=1\n;\n\n---------------------------------Lo dejo comentado porque este parrafo fue reemplzado más adelante  -----JB 13/10/22\n/* ng_hd_var12_fl */ --Flag que indica si el suscriptor aplica a campaña de casim Mesa Terminales\n/*insert overwrite table sandbox.jg_campania_terminales_casim \nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\n--------------------Modificacion 6/4/22-----------------------------------------------\n--join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr cambiar por at_parque\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\n--------------------------------------------------------------------------------------\nwhere \na.mes=date_format(add_months(current_date,-1),'yyyyMM')\nand a.fl_terminal='Sin Usim'\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\n)x where x.orden=1\n;*/\n------------------------------------------------------------------------------------------------------------------------\n\n/*ng_hd_var13_fl Flag que indica si el suscriptor estando en la base potencial actualizó su SO*/\ninsert overwrite table sandbox.jg_campania_terminales_actualizacion_android_empresas \nselect * from (\nselect \nb.suscripcion_id,\na.ani,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom (select  distinct ani from sandbox_datascientist.jfp_campania_terminales_anis_bono_01) a\n--------------------Modificacion 6/4/22-----------------------------------------------\n--join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr cambiar por at_parque\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=date_format(add_months(current_date,-1),'yyyyMM')\n-------------------------------------------------------------------------------------\n)x where x.orden=1\n;\n\n\n/*ng_hd_var14_fl Flag que indica si el suscriptor aplica a la campaña de mal configurados*/\ninsert overwrite table sandbox.jg_campania_terminales_actualizacion_ios_empresas\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_terminales_mal_config a\n--------------------Modificacion 6/4/22-----------------------------------------------\n--join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr cambiar por at_parque\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\n--------------------------------------------------------------------------------------\nwhere \na.mes=date_format(add_months(current_date,-1),'yyyyMM')\n)x where x.orden=1\n;\n","user":"jpinelli","dateUpdated":"2024-03-28T20:36:05-0300","config":{"editorSetting":{"editOnDblClick":false,"language":"sql","completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","fontSize":9,"title":true,"results":{},"enabled":true,"editorHide":false},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : 133838"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 218686"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 1173"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 121208"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 102938"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 84641"}]},"apps":[],"jobName":"paragraph_1652465262482_69778856","id":"20211130-190022_1917036810","dateCreated":"2022-05-13T15:07:42-0300","dateStarted":"2024-03-13T15:26:09-0300","dateFinished":"2024-03-13T15:32:18-0300","status":"FINISHED","progressUpdateIntervalMs":500,"$$hashKey":"object:55"},{"title":"Casim 2.0 (agregada 2022 05 06)","text":"%jdbc(hive)\n\n/* Esta query sirve para generar la marca de la campaña de CASIM utilizando los mismos criterios pero desde las fuentes de trafico y la at_tacs (hay inconsistencias en la at_parque)*/\n\ndrop table sandbox_datascientist.jfp_imsis_trafico_01;\ncreate table sandbox_datascientist.jfp_imsis_trafico_01 stored as orc as\n\nselect * from (select ani, imsi, fecha, row_number() over (partition by ani order by fecha desc) as orden from trafico.comptel_xdr_consolidado a\nwhere fecha between date_format(date_sub(current_date,day(current_date)),'yyyyMM01') and date_format(date_sub(current_date,day(current_date)),'yyyyMMdd') ---------------------------------------------------------------------------------->Fecha\ngroup by ani, imsi, fecha)x where x.orden=1;\n\n\ninsert overwrite table sandbox.jg_campania_terminales_casim\n\nselect * from (\nselect\nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number() over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr= a.mes\nleft join sandbox_datascientist.jfp_imsis_trafico_01 c on a.ani=substring(c.ani,3,10)\nleft join access_data.at_tacs_gsma_m d on b.tac_nr=d.tac_nr and d.periodo_nr=a.mes\nwhere a.mes=date_format(add_months(current_date,-1),'yyyyMM') ---------------------------------------------------------------------------------->Fecha\n-- and a.fl_terminal='Sin Usim'\nand substring(c.imsi,8,1) <> '9'\nand d.banda_general_tx='LTE Compatible'\n-- and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\n)x where x.orden=1;\n","user":"jpinelli","dateUpdated":"2024-03-28T20:36:05-0300","config":{"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","fontSize":9,"title":true,"results":{},"enabled":true,"editorHide":false},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : 0"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 15916175"},{"type":"TEXT","data":"Query executed successfully. Affected rows : 84265"}]},"apps":[],"jobName":"paragraph_1652465262533_1394234082","id":"20220506-114234_2015002878","dateCreated":"2022-05-13T15:07:42-0300","dateStarted":"2024-03-13T15:26:26-0300","dateFinished":"2024-03-13T15:52:09-0300","status":"FINISHED","progressUpdateIntervalMs":500,"$$hashKey":"object:56"},{"text":"%jdbc(hive)\n\n-- -----Act SO Android\n-- select count(*) from sandbox.jg_campania_terminales_actualizacion_android a;\n\n-- -----Act SO Apple\n-- select count(*) from sandbox.jg_campania_terminales_actualizacion_ios b;\n\n-- -----Cater Apple\n-- select count(*) from sandbox.jg_campania_terminales_cater_ios c;\n\n-- -----Cater Android\n-- select count(*) from sandbox.jg_campania_terminales_cater_android d;\n\n-- -----Casim\n-- select count(*) from sandbox.jg_campania_terminales_casim e;\n\n-----Act SO camp\n-- select count(*) from sandbox.jg_campania_terminales_actualizacion_android_empresas f;\n\n-- -----Mal configurados\n-- select count(*) from sandbox.jg_campania_terminales_actualizacion_ios_empresas g;","user":"jpinelli","dateUpdated":"2024-03-28T20:36:05-0300","config":{"editorSetting":{"editOnDblClick":false,"language":"sql","completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","fontSize":9,"results":{"0":{"graph":{"mode":"table","height":300,"optionOpen":false,"setting":{"table":{"tableGridState":{},"tableColumnTypeState":{"names":{"_c0":"string"},"updated":false},"tableOptionSpecHash":"[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]","tableOptionValue":{"useFilter":false,"showPagination":false,"showAggregationFooter":false},"updated":false,"initialized":false}},"commonSetting":{}}},"1":{"graph":{"mode":"table","height":300,"optionOpen":false,"setting":{"table":{"tableGridState":{},"tableColumnTypeState":{"names":{"_c0":"string"},"updated":false},"tableOptionSpecHash":"[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]","tableOptionValue":{"useFilter":false,"showPagination":false,"showAggregationFooter":false},"updated":false,"initialized":false}},"commonSetting":{}}},"2":{"graph":{"mode":"table","height":300,"optionOpen":false,"setting":{"table":{"tableGridState":{},"tableColumnTypeState":{"names":{"_c0":"string"},"updated":false},"tableOptionSpecHash":"[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]","tableOptionValue":{"useFilter":false,"showPagination":false,"showAggregationFooter":false},"updated":false,"initialized":false}},"commonSetting":{}}},"3":{"graph":{"mode":"table","height":300,"optionOpen":false,"setting":{"table":{"tableGridState":{},"tableColumnTypeState":{"names":{"_c0":"string"},"updated":false},"tableOptionSpecHash":"[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]","tableOptionValue":{"useFilter":false,"showPagination":false,"showAggregationFooter":false},"updated":false,"initialized":false}},"commonSetting":{}}},"4":{"graph":{"mode":"table","height":300,"optionOpen":false,"setting":{"table":{"tableGridState":{},"tableColumnTypeState":{"names":{"_c0":"string"},"updated":false},"tableOptionSpecHash":"[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]","tableOptionValue":{"useFilter":false,"showPagination":false,"showAggregationFooter":false},"updated":false,"initialized":false}},"commonSetting":{}}},"5":{"graph":{"mode":"table","height":300,"optionOpen":false,"setting":{"table":{"tableGridState":{},"tableColumnTypeState":{"names":{"_c0":"string"},"updated":false},"tableOptionSpecHash":"[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]","tableOptionValue":{"useFilter":false,"showPagination":false,"showAggregationFooter":false},"updated":false,"initialized":false}},"commonSetting":{}}},"6":{"graph":{"mode":"table","height":300,"optionOpen":false,"setting":{"table":{"tableGridState":{},"tableColumnTypeState":{"names":{"_c0":"string"},"updated":false},"tableOptionSpecHash":"[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]","tableOptionValue":{"useFilter":false,"showPagination":false,"showAggregationFooter":false},"updated":false,"initialized":false}},"commonSetting":{}}}},"enabled":true,"editorHide":false},"settings":{"params":{},"forms":{}},"results":{"code":"ERROR","msg":[{"type":"TABLE","data":"_c0\n163365\n"},{"type":"TEXT","data":"org.apache.hive.service.cli.HiveSQLException: Error while compiling statement: FAILED: ParseException line 2:83 cannot recognize input near '<EOF>' '<EOF>' '<EOF>'\n\tat org.apache.hive.jdbc.Utils.verifySuccess(Utils.java:357)\n\tat org.apache.hive.jdbc.Utils.verifySuccessWithInfo(Utils.java:343)\n\tat org.apache.hive.jdbc.HiveStatement.runAsyncOnServer(HiveStatement.java:334)\n\tat org.apache.hive.jdbc.HiveStatement.execute(HiveStatement.java:275)\n\tat org.apache.commons.dbcp2.DelegatingStatement.execute(DelegatingStatement.java:291)\n\tat org.apache.commons.dbcp2.DelegatingStatement.execute(DelegatingStatement.java:291)\n\tat org.apache.zeppelin.jdbc.JDBCInterpreter.executeSql(JDBCInterpreter.java:737)\n\tat org.apache.zeppelin.jdbc.JDBCInterpreter.interpret(JDBCInterpreter.java:820)\n\tat org.apache.zeppelin.interpreter.LazyOpenInterpreter.interpret(LazyOpenInterpreter.java:103)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreterServer$InterpretJob.jobRun(RemoteInterpreterServer.java:632)\n\tat org.apache.zeppelin.scheduler.Job.run(Job.java:188)\n\tat org.apache.zeppelin.scheduler.ParallelScheduler$JobRunner.run(ParallelScheduler.java:162)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.access$201(ScheduledThreadPoolExecutor.java:180)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:293)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: org.apache.hive.service.cli.HiveSQLException: Error while compiling statement: FAILED: ParseException line 2:83 cannot recognize input near '<EOF>' '<EOF>' '<EOF>'\n\tat org.apache.hive.service.cli.operation.Operation.toSQLException(Operation.java:356)\n\tat org.apache.hive.service.cli.operation.SQLOperation.prepare(SQLOperation.java:207)\n\tat org.apache.hive.service.cli.operation.SQLOperation.runInternal(SQLOperation.java:261)\n\tat org.apache.hive.service.cli.operation.Operation.run(Operation.java:272)\n\tat org.apache.hive.service.cli.session.HiveSessionImpl.executeStatementInternal(HiveSessionImpl.java:549)\n\tat org.apache.hive.service.cli.session.HiveSessionImpl.executeStatementAsync(HiveSessionImpl.java:535)\n\tat org.apache.hive.service.cli.CLIService.executeStatementAsync(CLIService.java:315)\n\tat org.apache.hive.service.cli.thrift.ThriftCLIService.ExecuteStatement(ThriftCLIService.java:567)\n\tat org.apache.hive.service.rpc.thrift.TCLIService$Processor$ExecuteStatement.getResult(TCLIService.java:1557)\n\tat org.apache.hive.service.rpc.thrift.TCLIService$Processor$ExecuteStatement.getResult(TCLIService.java:1542)\n\tat org.apache.thrift.ProcessFunction.process(ProcessFunction.java:39)\n\tat org.apache.thrift.TBaseProcessor.process(TBaseProcessor.java:39)\n\tat org.apache.thrift.server.TServlet.doPost(TServlet.java:83)\n\tat org.apache.hive.service.cli.thrift.ThriftHttpServlet.doPost(ThriftHttpServlet.java:237)\n\tat javax.servlet.http.HttpServlet.service(HttpServlet.java:707)\n\tat javax.servlet.http.HttpServlet.service(HttpServlet.java:790)\n\tat org.eclipse.jetty.servlet.ServletHolder.handle(ServletHolder.java:791)\n\tat org.eclipse.jetty.servlet.ServletHandler.doHandle(ServletHandler.java:550)\n\tat org.eclipse.jetty.server.handler.ScopedHandler.handle(ScopedHandler.java:143)\n\tat org.eclipse.jetty.security.SecurityHandler.handle(SecurityHandler.java:602)\n\tat org.eclipse.jetty.server.handler.HandlerWrapper.handle(HandlerWrapper.java:127)\n\tat org.eclipse.jetty.server.handler.ScopedHandler.nextHandle(ScopedHandler.java:235)\n\tat org.eclipse.jetty.server.session.SessionHandler.doHandle(SessionHandler.java:1624)\n\tat org.eclipse.jetty.server.handler.ScopedHandler.nextHandle(ScopedHandler.java:233)\n\tat org.eclipse.jetty.server.handler.ContextHandler.doHandle(ContextHandler.java:1435)\n\tat org.eclipse.jetty.server.handler.ScopedHandler.nextScope(ScopedHandler.java:188)\n\tat org.eclipse.jetty.servlet.ServletHandler.doScope(ServletHandler.java:501)\n\tat org.eclipse.jetty.server.session.SessionHandler.doScope(SessionHandler.java:1594)\n\tat org.eclipse.jetty.server.handler.ScopedHandler.nextScope(ScopedHandler.java:186)\n\tat org.eclipse.jetty.server.handler.ContextHandler.doScope(ContextHandler.java:1350)\n\tat org.eclipse.jetty.server.handler.ScopedHandler.handle(ScopedHandler.java:141)\n\tat org.eclipse.jetty.server.handler.gzip.GzipHandler.handle(GzipHandler.java:763)\n\tat org.eclipse.jetty.server.handler.HandlerWrapper.handle(HandlerWrapper.java:127)\n\tat org.eclipse.jetty.server.Server.handle(Server.java:516)\n\tat org.eclipse.jetty.server.HttpChannel.lambda$handle$1(HttpChannel.java:388)\n\tat org.eclipse.jetty.server.HttpChannel.dispatch(HttpChannel.java:633)\n\tat org.eclipse.jetty.server.HttpChannel.handle(HttpChannel.java:380)\n\tat org.eclipse.jetty.server.HttpConnection.onFillable(HttpConnection.java:277)\n\tat org.eclipse.jetty.io.AbstractConnection$ReadCallback.succeeded(AbstractConnection.java:311)\n\tat org.eclipse.jetty.io.FillInterest.fillable(FillInterest.java:105)\n\tat org.eclipse.jetty.io.ChannelEndPoint$1.run(ChannelEndPoint.java:104)\n\tat org.eclipse.jetty.util.thread.strategy.EatWhatYouKill.runTask(EatWhatYouKill.java:336)\n\tat org.eclipse.jetty.util.thread.strategy.EatWhatYouKill.doProduce(EatWhatYouKill.java:313)\n\tat org.eclipse.jetty.util.thread.strategy.EatWhatYouKill.tryProduce(EatWhatYouKill.java:171)\n\tat org.eclipse.jetty.util.thread.strategy.EatWhatYouKill.run(EatWhatYouKill.java:129)\n\tat org.eclipse.jetty.util.thread.ReservedThreadExecutor$ReservedThread.run(ReservedThreadExecutor.java:383)\n\t... 3 more\nCaused by: java.lang.RuntimeException: org.apache.hadoop.hive.ql.parse.ParseException:line 2:83 cannot recognize input near '<EOF>' '<EOF>' '<EOF>'\n\tat org.apache.hadoop.hive.ql.parse.ParseDriver.parse(ParseDriver.java:144)\n\tat org.apache.hadoop.hive.ql.parse.ParseUtils.parse(ParseUtils.java:79)\n\tat org.apache.hadoop.hive.ql.parse.ParseUtils.parse(ParseUtils.java:72)\n\tat org.apache.hadoop.hive.ql.Compiler.parse(Compiler.java:170)\n\tat org.apache.hadoop.hive.ql.Compiler.compile(Compiler.java:103)\n\tat org.apache.hadoop.hive.ql.Driver.compile(Driver.java:194)\n\tat org.apache.hadoop.hive.ql.Driver.compileInternal(Driver.java:614)\n\tat org.apache.hadoop.hive.ql.Driver.compileAndRespond(Driver.java:560)\n\tat org.apache.hadoop.hive.ql.Driver.compileAndRespond(Driver.java:554)\n\tat org.apache.hadoop.hive.ql.reexec.ReExecDriver.compileAndRespond(ReExecDriver.java:127)\n\tat org.apache.hive.service.cli.operation.SQLOperation.prepare(SQLOperation.java:200)\n\t... 47 more\n"}]},"apps":[],"jobName":"paragraph_1652465262583_95235974","id":"20211210-121313_2073583599","dateCreated":"2022-05-13T15:07:42-0300","dateStarted":"2023-06-15T16:40:33-0300","dateFinished":"2023-06-15T16:40:45-0300","status":"ERROR","progressUpdateIntervalMs":500,"$$hashKey":"object:57"},{"title":"Tabla \"inclusiva\" para campaña cater empresas (UNICA VEZ)","text":"%jdbc(hive)\ndrop table sandbox_datascientist.jfp_campania_terminales_empresas_cater;\ncreate table sandbox_datascientist.jfp_campania_terminales_empresas_cater as\nselect * from (\nselect \nb.suscripcion_id,\na.ani,\na.tipo_cliente_de,\nb.Tipo_Organizacion_DE,\na.fl_apple fl_apple_viejo, \na.fl_terminal, \na.fl_grupo_so, \na.fl_grupo_accion,\n--1 as fl_campania,\nc.fabricante_equipo_de marca_equipo,\nCASE WHEN a.fl_apple is null and c.fabricante_equipo_de LIKE '%Apple Inc%' THEN 1 \n    when a.fl_apple is null and c.fabricante_equipo_de NOT LIKE '%Apple Inc%' then 0 ELSE a.fl_apple end AS fl_apple,\ncase when b.Suscripcion_CD LIKE 'K%' then 1 else 0 end fl_kite,\nb.m2m_fl,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\njoin ACCESS_DATA.AT_Parque_M b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr\nleft join access_data.AT_Tacs_Gsma_M c\non b.tac_nr = c.tac_nr and c.periodo_nr = 202202\nwhere \na.mes=202202\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so='Obsoleto'\n--and a.tipo_cliente_de not like '%Individuo%'\n--and fl_apple=1\n)x where x.orden=1\n;\n\n/*INSERT OVERWRITE DIRECTORY 'hdfs://hdpvelez/user/j_braunstein/campania_terminales_empresas_cater' ROW FORMAT DELIMITED FIELDS TERMINATED BY '|' NULL DEFINED AS '' STORED AS TEXTFILE \n\nSELECT\ncast(suscripcion_id as varchar(20)) as suscripcion_id,\ncast(ani as varchar(20)) as ani,\ntipo_cliente_de,\nTipo_Organizacion_DE,\ncast(fl_apple as int) as fl_apple\nFROM sandbox_datascientist.jfp_campania_terminales_empresas_cater\nwhere a.tipo_cliente_de not like '%Individuo%';","user":"jpinelli","dateUpdated":"2024-03-28T20:36:06-0300","config":{"tableHide":true,"editorSetting":{"editOnDblClick":false,"language":"sql","completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"title":true,"results":{},"enabled":false,"fontSize":9},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"}]},"apps":[],"jobName":"paragraph_1652465262643_1637272791","id":"20220315-145923_857328541","dateCreated":"2022-05-13T15:07:42-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:58"},{"title":"Creación de la tabla en Tera","text":"create table SBX_PROC_CIERRE.aoc_jbr_campania_terminales_empresas_cater \r\n(\r\nsuscripcion_id varchar(20),\r\nani varchar(20),\r\ntipo_cliente_de varchar(20),\r\nTipo_Organizacion_DE varchar(20),\r\nfl_apple int\r\n) primary index (suscripcion_id);","user":"jpinelli","dateUpdated":"2024-03-28T20:36:06-0300","config":{"editorSetting":{"editOnDblClick":false,"language":"sql","completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"title":true,"results":{},"enabled":false,"fontSize":9},"settings":{"params":{},"forms":{}},"apps":[],"jobName":"paragraph_1652465262691_-1656549385","id":"20220316-100743_1885008518","dateCreated":"2022-05-13T15:07:42-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:59"},{"title":"SQOOP EXPORT","text":"\r\n","user":"jpinelli","dateUpdated":"2024-03-28T20:36:06-0300","config":{"tableHide":true,"editorSetting":{"editOnDblClick":false,"language":"sql","completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"title":true,"results":{},"enabled":false,"fontSize":9},"settings":{"params":{},"forms":{}},"results":{"code":"ERROR","msg":[{"type":"TEXT","data":"bash: $'\\r': command not found\nWarning: /usr/hdp/2.6.5.0-292/hbase does not exist! HBase imports will fail.\nPlease set $HBASE_HOME to the root of your HBase installation.\nWarning: /usr/hdp/2.6.5.0-292/accumulo does not exist! Accumulo imports will fail.\nPlease set $ACCUMULO_HOME to the root of your Accumulo installation.\n22/03/16 09:39:52 INFO sqoop.Sqoop: Running Sqoop version: 1.4.6.2.6.5.0-292\n22/03/16 09:39:52 ERROR tool.BaseSqoopTool: Error parsing arguments for export:\n22/03/16 09:39:52 ERROR tool.BaseSqoopTool: Unrecognized argument: \r\n\nTry --help for usage instructions.\nbash: line 2: --connection-manager: command not found\nbash: line 3: --username: command not found\nbash: line 4: --password: command not found\nbash: line 5: --num-mappers: command not found\nbash: line 6: --table: command not found\nbash: line 7: --export-dir: command not found\nbash: line 8: --input-fields-terminated-by: command not found\nbash: line 9: --batch: command not found\n"},{"type":"TEXT","data":"ExitValue: 127"}]},"apps":[],"jobName":"paragraph_1652465262742_388854067","id":"20220315-170944_1632982792","dateCreated":"2022-05-13T15:07:42-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:60"},{"title":"Armado de salida para campaña --> Tablas a ABT no gobernada b2b b2c (VIEJO)","text":"%jdbc (hive)\n\n/* ng_hd_var08_fl */ --Flag que indica si el suscriptor aplica a campaña de actualización SO Android Mesa Terminales\ndrop table sandbox.jg_campania_terminales_actualizacion_android;\ncreate table sandbox.jg_campania_terminales_actualizacion_android stored as orc as \nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202110 --a.mes=b.periodo_nr --# si está la abt se cruza con el mes, sino N-1\nwhere\na.mes=202110\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so='actualizable'\nand fl_apple=0\n)x where x.orden=1\n;\n\n/* ng_hd_var09_fl */--Flag que indica si el suscriptor aplica a campaña de actualización SO IOS Mesa Terminales\ndrop table sandbox.jg_campania_terminales_actualizacion_ios;\ncreate table sandbox.jg_campania_terminales_actualizacion_ios stored as orc as\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202110 --a.mes=b.periodo_nr\nwhere \na.mes=202110 \n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so='actualizable'\nand fl_apple=1\n)x where x.orden=1\n;\n\n/* ng_hd_var10_fl */ --Flag que indica si el suscriptor aplica a campaña de cater IOS Mesa Terminales\ndrop table sandbox.jg_campania_terminales_cater_ios;\ncreate table sandbox.jg_campania_terminales_cater_ios stored as orc as\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202110 --a.mes=b.periodo_nr\nwhere \na.mes=202110\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so='Obsoleto'\nand fl_apple=1\n)x where x.orden=1\n;\n\n/* ng_hd_var11_fl */ --Flag que indica si el suscriptor aplica a campaña de cater Android Mesa Terminales\ndrop table sandbox.jg_campania_terminales_cater_android;\ncreate table sandbox.jg_campania_terminales_cater_android stored as orc as\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202110 --a.mes=b.periodo_nr\nwhere \na.mes=202110 \n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand ((a.fl_total_so='Obsoleto' and fl_apple=0)\n--or (fl_total_so='SO no identificado' and fl_so_generico in ('Firefox', 'Proprietary', 'Other', 'BlackBerry', 'Windows Phone', 'Windows Mobile', 'Tizen', 'Android'))\n)\n)x where x.orden=1\n;\n\n/* ng_hd_var12_fl */ --Flag que indica si el suscriptor aplica a campaña de casim Mesa Terminales\ndrop table sandbox.jg_campania_terminales_casim;\ncreate table sandbox.jg_campania_terminales_casim stored as orc as \nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202110 --a.mes=b.periodo_nr\nwhere \na.mes=202110 \nand a.fl_terminal='Sin Usim'\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\n)x where x.orden=1\n;","user":"jpinelli","dateUpdated":"2024-03-28T20:36:06-0300","config":{"tableHide":true,"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"title":true,"results":{},"enabled":false,"fontSize":9},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"}]},"apps":[],"jobName":"paragraph_1652465262794_764270311","id":"20210610-110308_451459826","dateCreated":"2022-05-13T15:07:42-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:61"},{"title":"Armado de salida para campaña --> Tablas a ABT no gobernada otras variables ad hoc (VIEJO)","text":"%jdbc (hive)\n\n/*ng_hd_var13_fl Flag que indica si el suscriptor estando en la base potencial actualizó su SO*/\ndrop table sandbox.jg_campania_terminales_actualizacion_android_empresas;\ncreate table sandbox.jg_campania_terminales_actualizacion_android_empresas stored as orc as \nselect * from (\nselect \nb.suscripcion_id,\na.ani,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom (select  distinct ani from sandbox_datascientist.aoc_jbr_campania_terminales_anis_bono_01) a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202110\n)x where x.orden=1\n;\n\n\n/*ng_hd_var14_fl Flag que indica si el suscriptor aplica a la campaña de mal configurados*/\ndrop table sandbox.jg_campania_terminales_actualizacion_ios_empresas;\ncreate table sandbox.jg_campania_terminales_actualizacion_ios_empresas stored as orc as\nselect * from (\nselect \nc.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by c.suscripcion_id order by c.suscripcion_id) as orden\nfrom sandbox.jg_terminales_mal_config a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil c on a.ani=c.valor_recurso_primario_cd and c.periodo_nr=202110\nwhere \na.mes=202110\n)x where x.orden=1\n;\n\n","user":"jpinelli","dateUpdated":"2024-03-28T20:36:06-0300","config":{"tableHide":true,"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"title":true,"results":{},"enabled":false,"fontSize":9},"settings":{"params":{},"forms":{}},"results":{"code":"ERROR","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"org.apache.hive.service.cli.HiveSQLException: Error while compiling statement: FAILED: ParseException line 1:0 cannot recognize input near '<EOF>' '<EOF>' '<EOF>'\n\tat org.apache.hive.jdbc.Utils.verifySuccess(Utils.java:277)\n\tat org.apache.hive.jdbc.Utils.verifySuccessWithInfo(Utils.java:263)\n\tat org.apache.hive.jdbc.HiveStatement.runAsyncOnServer(HiveStatement.java:303)\n\tat org.apache.hive.jdbc.HiveStatement.execute(HiveStatement.java:244)\n\tat org.apache.commons.dbcp2.DelegatingStatement.execute(DelegatingStatement.java:291)\n\tat org.apache.commons.dbcp2.DelegatingStatement.execute(DelegatingStatement.java:291)\n\tat org.apache.zeppelin.jdbc.JDBCInterpreter.executeSql(JDBCInterpreter.java:682)\n\tat org.apache.zeppelin.jdbc.JDBCInterpreter.interpret(JDBCInterpreter.java:763)\n\tat org.apache.zeppelin.interpreter.LazyOpenInterpreter.interpret(LazyOpenInterpreter.java:101)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreterServer$InterpretJob.jobRun(RemoteInterpreterServer.java:502)\n\tat org.apache.zeppelin.scheduler.Job.run(Job.java:175)\n\tat org.apache.zeppelin.scheduler.ParallelScheduler$JobRunner.run(ParallelScheduler.java:162)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.access$201(ScheduledThreadPoolExecutor.java:180)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:293)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: org.apache.hive.service.cli.HiveSQLException: Error while compiling statement: FAILED: ParseException line 1:0 cannot recognize input near '<EOF>' '<EOF>' '<EOF>'\n\tat org.apache.hive.service.cli.operation.Operation.toSQLException(Operation.java:324)\n\tat org.apache.hive.service.cli.operation.SQLOperation.prepare(SQLOperation.java:148)\n\tat org.apache.hive.service.cli.operation.SQLOperation.runInternal(SQLOperation.java:228)\n\tat org.apache.hive.service.cli.operation.Operation.run(Operation.java:264)\n\tat org.apache.hive.service.cli.session.HiveSessionImpl.executeStatementInternal(HiveSessionImpl.java:479)\n\tat org.apache.hive.service.cli.session.HiveSessionImpl.executeStatementAsync(HiveSessionImpl.java:466)\n\tat org.apache.hive.service.cli.CLIService.executeStatementAsync(CLIService.java:315)\n\tat org.apache.hive.service.cli.thrift.ThriftCLIService.ExecuteStatement(ThriftCLIService.java:509)\n\tat org.apache.hive.service.cli.thrift.TCLIService$Processor$ExecuteStatement.getResult(TCLIService.java:1377)\n\tat org.apache.hive.service.cli.thrift.TCLIService$Processor$ExecuteStatement.getResult(TCLIService.java:1362)\n\tat org.apache.thrift.ProcessFunction.process(ProcessFunction.java:39)\n\tat org.apache.thrift.TBaseProcessor.process(TBaseProcessor.java:39)\n\tat org.apache.thrift.server.TServlet.doPost(TServlet.java:83)\n\tat org.apache.hive.service.cli.thrift.ThriftHttpServlet.doPost(ThriftHttpServlet.java:206)\n\tat javax.servlet.http.HttpServlet.service(HttpServlet.java:727)\n\tat javax.servlet.http.HttpServlet.service(HttpServlet.java:820)\n\tat org.eclipse.jetty.servlet.ServletHolder.handle(ServletHolder.java:565)\n\tat org.eclipse.jetty.servlet.ServletHandler.doHandle(ServletHandler.java:479)\n\tat org.eclipse.jetty.server.session.SessionHandler.doHandle(SessionHandler.java:225)\n\tat org.eclipse.jetty.server.handler.ContextHandler.doHandle(ContextHandler.java:1031)\n\tat org.eclipse.jetty.servlet.ServletHandler.doScope(ServletHandler.java:406)\n\tat org.eclipse.jetty.server.session.SessionHandler.doScope(SessionHandler.java:186)\n\tat org.eclipse.jetty.server.handler.ContextHandler.doScope(ContextHandler.java:965)\n\tat org.eclipse.jetty.server.handler.ScopedHandler.handle(ScopedHandler.java:117)\n\tat org.eclipse.jetty.server.handler.HandlerWrapper.handle(HandlerWrapper.java:111)\n\tat org.eclipse.jetty.server.Server.handle(Server.java:349)\n\tat org.eclipse.jetty.server.AbstractHttpConnection.handleRequest(AbstractHttpConnection.java:449)\n\tat org.eclipse.jetty.server.AbstractHttpConnection$RequestHandler.content(AbstractHttpConnection.java:925)\n\tat org.eclipse.jetty.http.HttpParser.parseNext(HttpParser.java:857)\n\tat org.eclipse.jetty.http.HttpParser.parseAvailable(HttpParser.java:235)\n\tat org.eclipse.jetty.server.AsyncHttpConnection.handle(AsyncHttpConnection.java:76)\n\tat org.eclipse.jetty.io.nio.SelectChannelEndPoint.handle(SelectChannelEndPoint.java:609)\n\tat org.eclipse.jetty.io.nio.SelectChannelEndPoint$1.run(SelectChannelEndPoint.java:45)\n\t... 3 more\nCaused by: java.lang.RuntimeException: org.apache.hadoop.hive.ql.parse.ParseException:line 1:0 cannot recognize input near '<EOF>' '<EOF>' '<EOF>'\n\tat org.apache.hadoop.hive.ql.parse.ParseDriver.parse(ParseDriver.java:214)\n\tat org.apache.hadoop.hive.ql.parse.ParseDriver.parse(ParseDriver.java:171)\n\tat org.apache.hadoop.hive.ql.Driver.compile(Driver.java:438)\n\tat org.apache.hadoop.hive.ql.Driver.compile(Driver.java:321)\n\tat org.apache.hadoop.hive.ql.Driver.compileInternal(Driver.java:1224)\n\tat org.apache.hadoop.hive.ql.Driver.compileAndRespond(Driver.java:1218)\n\tat org.apache.hive.service.cli.operation.SQLOperation.prepare(SQLOperation.java:146)\n\t... 34 more\n"}]},"apps":[],"jobName":"paragraph_1652465262846_-599298482","id":"20210610-111510_499995218","dateCreated":"2022-05-13T15:07:42-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:62"},{"title":"TABLA A NBA (en desuso)","text":"%jdbc (hive)\ndrop table sandbox.jg_campania_so_nba_actualizacion_so;\ncreate table sandbox.jg_campania_so_nba_actualizacion_so as\nselect \nani,\ntipo_cliente_de as segmento,\n'' as marca,\n'' as modelo,\nversion_num as so_pre,\ncase when producto= 'Prepago' then 1 else 0 end as fl_prepago,\ntac_nr tac_pre\t,\ncei_ind_experiencia_total_nr cei_pre\nfrom sandbox.jg_tablero_terminales \nwhere  mes=202108 \nand tipo_cliente_de='Individuo'\nand unidad_negocio='Movil'\nand fl_navegador='NAVEGADOR'\nand fl_total_so='actualizable'\nand fl_apple in (0,1)\n;","user":"jpinelli","dateUpdated":"2024-03-28T20:36:06-0300","config":{"tableHide":true,"editorSetting":{"language":"sql","editOnDblClick":false,"completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"title":true,"results":{},"enabled":false,"fontSize":9},"settings":{"params":{},"forms":{}},"results":{"code":"SUCCESS","msg":[{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"},{"type":"TEXT","data":"Query executed successfully. Affected rows : -1"}]},"apps":[],"jobName":"paragraph_1652465262898_-278535518","id":"20210610-130824_709984435","dateCreated":"2022-05-13T15:07:42-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:63"},{"title":"Otros flags en desuso","text":"%jdbc\n\n/*ng_hd_var16_fl terminales 2018 o menor*/\n/*\ndrop table sandbox.jg_campania_terminales_cater_ios_empresas;\ncreate table sandbox.jg_campania_terminales_cater_ios_empresas stored as orc as\nselect * from (\nselect \nc.suscripcion_id,\na.ani,\n1 as fl_campania,\nrow_number ()  over (partition by c.suscripcion_id order by c.suscripcion_id) as orden\nfrom sandbox.jg_terminales_descriptivo_202105 a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil c on a.ani=c.valor_recurso_primario_cd and c.periodo_nr=202105\nwhere 1=1\nand a.mes=202105 \nand a.fl_individuo=0\nand fl_terminal_2018=1\nand fl_2M=0\nand a.unidad_negocio='Movil'\n)x where x.orden=1\n;\n*/\n\n/*ng_hd_var15_fl terminales 2019 o menor*/\n/*\ndrop table sandbox.jg_campania_terminales_cater_android_empresas;\ncreate table sandbox.jg_campania_terminales_cater_android_empresas stored as orc as\nselect * from (\nselect \nc.suscripcion_id,\na.ani,\n1 as fl_campania,\nrow_number ()  over (partition by c.suscripcion_id order by c.suscripcion_id) as orden\nfrom sandbox.jg_terminales_descriptivo_202105 a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil c on a.ani=c.valor_recurso_primario_cd and c.periodo_nr=202105\nwhere 1=1\nand a.mes=202105 \nand a.fl_individuo=0\nand fl_terminal_2019=1\nand fl_2M=0\nand a.unidad_negocio='Movil'\n)x where x.orden=1\n;\n*/\n\n/*ng_hd_var17_fl*/\n/*\ndrop table sandbox.jg_campania_terminales_casim_empresas;\ncreate table sandbox.jg_campania_terminales_casim_empresas stored as orc as \nselect * from (\nselect \nc.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by c.suscripcion_id order by c.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\n--join SBX_PLAN_BIENVENIDA.Parque_Unificado_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil c on a.ani=c.valor_recurso_primario_cd and a.mes=c.periodo_nr\nwhere \na.mes=202104 \nand a.fl_terminal='Sin Usim'\nand a.tipo_cliente_de='Empresa'\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\n)x where x.orden=1\n;\n*/","user":"jpinelli","dateUpdated":"2024-03-28T20:36:06-0300","config":{"editorSetting":{"editOnDblClick":false,"language":"sql","completionSupport":true},"colWidth":12,"editorMode":"ace/mode/sql","editorHide":false,"title":true,"results":{},"enabled":false,"fontSize":9},"settings":{"params":{},"forms":{}},"apps":[],"jobName":"paragraph_1652465262948_-1197389086","id":"20210907-103729_316585106","dateCreated":"2022-05-13T15:07:42-0300","status":"READY","errorMessage":"","progressUpdateIntervalMs":500,"$$hashKey":"object:64"}],"name":"JPinelli/TERMINALES/Term/7-Campania-MODELO_NUEVO 1","id":"2H4F56TQJ","noteParams":{},"noteForms":{},"angularObjects":{"angular:shared_process":[],"jdbc:shared_process":[],"sh:jpinelli:":[]},"config":{"isZeppelinNotebookCronEnable":false,"looknfeel":"default","personalizedMode":"false"},"info":{}}
+{
+  "paragraphs": [
+    {
+      "title": "TABLA PARA BONO 5GB",
+      "text": "%jdbc (hive)\ndrop table sandbox_datascientist.jfp_campania_terminales_anis_bono_01;\ncreate table sandbox_datascientist.jfp_campania_terminales_anis_bono_01 stored as orc as \nselect x.ani as ani from(\nselect  \na.ani,\ncase when b.ani is null then 0 else 1 end as fl_ok\nfrom sandbox.jg_seguimiento_campanias_seguimiento_out a\nleft join \n(select distinct ani from sandbox.jg_seguimiento_campanias_seguimiento_out where fl_campania_so=1 and mes_base=date_format(add_months(current_date,-3),'yyyyMM'))b on a.ani=b.ani --###que no esté en bases anteriores para no repetir el beneficio\n\nwhere a.fl_campania_so=1 and a.mes_base=date_format(add_months(current_date,-2),'yyyyMM')\n)x where x.fl_ok=0\n;",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:05-0300",
+      "config": {
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "fontSize": 9,
+        "title": true,
+        "results": {},
+        "enabled": true,
+        "editorHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 102938"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465262427_221596543",
+      "id": "20210610-151629_78858807",
+      "dateCreated": "2022-05-13T15:07:42-0300",
+      "dateStarted": "2024-03-13T15:16:56-0300",
+      "dateFinished": "2024-03-13T15:21:09-0300",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500,
+      "focus": true,
+      "$$hashKey": "object:54"
+    },
+    {
+      "title": "Salida para campaña NUEVO (Dic21) --> Tablas a ABT no gobernada b2b b2c",
+      "text": "%jdbc(hive)\n/* ng_hd_var08_fl */ --Flag que indica si el suscriptor aplica a campaña de actualización SO Android Mesa Terminales\n\ninsert overwrite table sandbox.jg_campania_terminales_actualizacion_android\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\n--------------------Modificacion 6/4/22-----------------------------------------------\n--join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr cambiar por at_parque\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\n--------------------------------------------------------------------------------------\nwhere\na.mes=date_format(add_months(current_date,-1),'yyyyMM')\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so='actualizable'\nand fl_apple=0\n)x where x.orden=1\n;\n\n/* ng_hd_var09_fl */--Flag que indica si el suscriptor aplica a campaña de actualización SO IOS Mesa Terminales\ninsert overwrite table sandbox.jg_campania_terminales_actualizacion_ios\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\n--------------------Modificacion 6/4/22-----------------------------------------------\n--join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr cambiar por at_parque\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\n--------------------------------------------------------------------------------------\n--a.mes=b.periodo_nr\nwhere \na.mes=date_format(add_months(current_date,-1),'yyyyMM')\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so='actualizable'\nand fl_apple=1\n)x where x.orden=1\n;\n\n/* ng_hd_var10_fl */ --Flag que indica si el suscriptor aplica a campaña de cater IOS Mesa Terminales\ninsert overwrite table sandbox.jg_campania_terminales_cater_ios\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\n--------------------Modificacion 6/4/22-----------------------------------------------\n--join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr cambiar por at_parque\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\n--------------------------------------------------------------------------------------\nwhere \na.mes=date_format(add_months(current_date,-1),'yyyyMM')\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so='Obsoleto'\nand fl_apple=1\n)x where x.orden=1\n;\n\n/* ng_hd_var11_fl */ --Flag que indica si el suscriptor aplica a campaña de cater Android Mesa Terminales\ninsert overwrite table sandbox.jg_campania_terminales_cater_android\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\n--------------------Modificacion 6/4/22-----------------------------------------------\n--join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr cambiar por at_parque\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\n--------------------------------------------------------------------------------------\nwhere \na.mes=date_format(add_months(current_date,-1),'yyyyMM')\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand ((a.fl_total_so='Obsoleto' and fl_apple=0)\n--or (fl_total_so='SO no identificado' and fl_so_generico in ('Firefox', 'Proprietary', 'Other', 'BlackBerry', 'Windows Phone', 'Windows Mobile', 'Tizen', 'Android'))\n)\n)x where x.orden=1\n;\n\n---------------------------------Lo dejo comentado porque este parrafo fue reemplzado más adelante  -----JB 13/10/22\n/* ng_hd_var12_fl */ --Flag que indica si el suscriptor aplica a campaña de casim Mesa Terminales\n/*insert overwrite table sandbox.jg_campania_terminales_casim \nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\n--------------------Modificacion 6/4/22-----------------------------------------------\n--join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr cambiar por at_parque\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\n--------------------------------------------------------------------------------------\nwhere \na.mes=date_format(add_months(current_date,-1),'yyyyMM')\nand a.fl_terminal='Sin Usim'\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\n)x where x.orden=1\n;*/\n------------------------------------------------------------------------------------------------------------------------\n\n/*ng_hd_var13_fl Flag que indica si el suscriptor estando en la base potencial actualizó su SO*/\ninsert overwrite table sandbox.jg_campania_terminales_actualizacion_android_empresas \nselect * from (\nselect \nb.suscripcion_id,\na.ani,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom (select  distinct ani from sandbox_datascientist.jfp_campania_terminales_anis_bono_01) a\n--------------------Modificacion 6/4/22-----------------------------------------------\n--join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr cambiar por at_parque\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=date_format(add_months(current_date,-1),'yyyyMM')\n-------------------------------------------------------------------------------------\n)x where x.orden=1\n;\n\n\n/*ng_hd_var14_fl Flag que indica si el suscriptor aplica a la campaña de mal configurados*/\ninsert overwrite table sandbox.jg_campania_terminales_actualizacion_ios_empresas\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_terminales_mal_config a\n--------------------Modificacion 6/4/22-----------------------------------------------\n--join SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr cambiar por at_parque\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\n--------------------------------------------------------------------------------------\nwhere \na.mes=date_format(add_months(current_date,-1),'yyyyMM')\n)x where x.orden=1\n;\n",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:05-0300",
+      "config": {
+        "editorSetting": {
+          "editOnDblClick": false,
+          "language": "sql",
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "fontSize": 9,
+        "title": true,
+        "results": {},
+        "enabled": true,
+        "editorHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 133838"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 218686"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 1173"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 121208"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 102938"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 84641"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465262482_69778856",
+      "id": "20211130-190022_1917036810",
+      "dateCreated": "2022-05-13T15:07:42-0300",
+      "dateStarted": "2024-03-13T15:26:09-0300",
+      "dateFinished": "2024-03-13T15:32:18-0300",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:55"
+    },
+    {
+      "title": "Casim 2.0 (agregada 2022 05 06)",
+      "text": "%jdbc(hive)\n\n/* Esta query sirve para generar la marca de la campaña de CASIM utilizando los mismos criterios pero desde las fuentes de trafico y la at_tacs (hay inconsistencias en la at_parque)*/\n\ndrop table sandbox_datascientist.jfp_imsis_trafico_01;\ncreate table sandbox_datascientist.jfp_imsis_trafico_01 stored as orc as\n\nselect * from (select ani, imsi, fecha, row_number() over (partition by ani order by fecha desc) as orden from trafico.comptel_xdr_consolidado a\nwhere fecha between date_format(date_sub(current_date,day(current_date)),'yyyyMM01') and date_format(date_sub(current_date,day(current_date)),'yyyyMMdd') ---------------------------------------------------------------------------------->Fecha\ngroup by ani, imsi, fecha)x where x.orden=1;\n\n\ninsert overwrite table sandbox.jg_campania_terminales_casim\n\nselect * from (\nselect\nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number() over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\njoin access_data.at_parque_m b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr= a.mes\nleft join sandbox_datascientist.jfp_imsis_trafico_01 c on a.ani=substring(c.ani,3,10)\nleft join access_data.at_tacs_gsma_m d on b.tac_nr=d.tac_nr and d.periodo_nr=a.mes\nwhere a.mes=date_format(add_months(current_date,-1),'yyyyMM') ---------------------------------------------------------------------------------->Fecha\n-- and a.fl_terminal='Sin Usim'\nand substring(c.imsi,8,1) <> '9'\nand d.banda_general_tx='LTE Compatible'\n-- and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\n)x where x.orden=1;\n",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:05-0300",
+      "config": {
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "fontSize": 9,
+        "title": true,
+        "results": {},
+        "enabled": true,
+        "editorHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 0"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 15916175"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : 84265"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465262533_1394234082",
+      "id": "20220506-114234_2015002878",
+      "dateCreated": "2022-05-13T15:07:42-0300",
+      "dateStarted": "2024-03-13T15:26:26-0300",
+      "dateFinished": "2024-03-13T15:52:09-0300",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:56"
+    },
+    {
+      "text": "%jdbc(hive)\n\n-- -----Act SO Android\n-- select count(*) from sandbox.jg_campania_terminales_actualizacion_android a;\n\n-- -----Act SO Apple\n-- select count(*) from sandbox.jg_campania_terminales_actualizacion_ios b;\n\n-- -----Cater Apple\n-- select count(*) from sandbox.jg_campania_terminales_cater_ios c;\n\n-- -----Cater Android\n-- select count(*) from sandbox.jg_campania_terminales_cater_android d;\n\n-- -----Casim\n-- select count(*) from sandbox.jg_campania_terminales_casim e;\n\n-----Act SO camp\n-- select count(*) from sandbox.jg_campania_terminales_actualizacion_android_empresas f;\n\n-- -----Mal configurados\n-- select count(*) from sandbox.jg_campania_terminales_actualizacion_ios_empresas g;",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:05-0300",
+      "config": {
+        "editorSetting": {
+          "editOnDblClick": false,
+          "language": "sql",
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "fontSize": 9,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "table",
+              "height": 300,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {},
+                  "tableColumnTypeState": {
+                    "names": {
+                      "_c0": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                }
+              },
+              "commonSetting": {}
+            }
+          },
+          "1": {
+            "graph": {
+              "mode": "table",
+              "height": 300,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {},
+                  "tableColumnTypeState": {
+                    "names": {
+                      "_c0": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                }
+              },
+              "commonSetting": {}
+            }
+          },
+          "2": {
+            "graph": {
+              "mode": "table",
+              "height": 300,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {},
+                  "tableColumnTypeState": {
+                    "names": {
+                      "_c0": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                }
+              },
+              "commonSetting": {}
+            }
+          },
+          "3": {
+            "graph": {
+              "mode": "table",
+              "height": 300,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {},
+                  "tableColumnTypeState": {
+                    "names": {
+                      "_c0": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                }
+              },
+              "commonSetting": {}
+            }
+          },
+          "4": {
+            "graph": {
+              "mode": "table",
+              "height": 300,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {},
+                  "tableColumnTypeState": {
+                    "names": {
+                      "_c0": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                }
+              },
+              "commonSetting": {}
+            }
+          },
+          "5": {
+            "graph": {
+              "mode": "table",
+              "height": 300,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {},
+                  "tableColumnTypeState": {
+                    "names": {
+                      "_c0": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                }
+              },
+              "commonSetting": {}
+            }
+          },
+          "6": {
+            "graph": {
+              "mode": "table",
+              "height": 300,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {},
+                  "tableColumnTypeState": {
+                    "names": {
+                      "_c0": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                }
+              },
+              "commonSetting": {}
+            }
+          }
+        },
+        "enabled": true,
+        "editorHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "ERROR",
+        "msg": [
+          {
+            "type": "TABLE",
+            "data": "_c0\n163365\n"
+          },
+          {
+            "type": "TEXT",
+            "data": "org.apache.hive.service.cli.HiveSQLException: Error while compiling statement: FAILED: ParseException line 2:83 cannot recognize input near '<EOF>' '<EOF>' '<EOF>'\n\tat org.apache.hive.jdbc.Utils.verifySuccess(Utils.java:357)\n\tat org.apache.hive.jdbc.Utils.verifySuccessWithInfo(Utils.java:343)\n\tat org.apache.hive.jdbc.HiveStatement.runAsyncOnServer(HiveStatement.java:334)\n\tat org.apache.hive.jdbc.HiveStatement.execute(HiveStatement.java:275)\n\tat org.apache.commons.dbcp2.DelegatingStatement.execute(DelegatingStatement.java:291)\n\tat org.apache.commons.dbcp2.DelegatingStatement.execute(DelegatingStatement.java:291)\n\tat org.apache.zeppelin.jdbc.JDBCInterpreter.executeSql(JDBCInterpreter.java:737)\n\tat org.apache.zeppelin.jdbc.JDBCInterpreter.interpret(JDBCInterpreter.java:820)\n\tat org.apache.zeppelin.interpreter.LazyOpenInterpreter.interpret(LazyOpenInterpreter.java:103)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreterServer$InterpretJob.jobRun(RemoteInterpreterServer.java:632)\n\tat org.apache.zeppelin.scheduler.Job.run(Job.java:188)\n\tat org.apache.zeppelin.scheduler.ParallelScheduler$JobRunner.run(ParallelScheduler.java:162)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.access$201(ScheduledThreadPoolExecutor.java:180)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:293)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: org.apache.hive.service.cli.HiveSQLException: Error while compiling statement: FAILED: ParseException line 2:83 cannot recognize input near '<EOF>' '<EOF>' '<EOF>'\n\tat org.apache.hive.service.cli.operation.Operation.toSQLException(Operation.java:356)\n\tat org.apache.hive.service.cli.operation.SQLOperation.prepare(SQLOperation.java:207)\n\tat org.apache.hive.service.cli.operation.SQLOperation.runInternal(SQLOperation.java:261)\n\tat org.apache.hive.service.cli.operation.Operation.run(Operation.java:272)\n\tat org.apache.hive.service.cli.session.HiveSessionImpl.executeStatementInternal(HiveSessionImpl.java:549)\n\tat org.apache.hive.service.cli.session.HiveSessionImpl.executeStatementAsync(HiveSessionImpl.java:535)\n\tat org.apache.hive.service.cli.CLIService.executeStatementAsync(CLIService.java:315)\n\tat org.apache.hive.service.cli.thrift.ThriftCLIService.ExecuteStatement(ThriftCLIService.java:567)\n\tat org.apache.hive.service.rpc.thrift.TCLIService$Processor$ExecuteStatement.getResult(TCLIService.java:1557)\n\tat org.apache.hive.service.rpc.thrift.TCLIService$Processor$ExecuteStatement.getResult(TCLIService.java:1542)\n\tat org.apache.thrift.ProcessFunction.process(ProcessFunction.java:39)\n\tat org.apache.thrift.TBaseProcessor.process(TBaseProcessor.java:39)\n\tat org.apache.thrift.server.TServlet.doPost(TServlet.java:83)\n\tat org.apache.hive.service.cli.thrift.ThriftHttpServlet.doPost(ThriftHttpServlet.java:237)\n\tat javax.servlet.http.HttpServlet.service(HttpServlet.java:707)\n\tat javax.servlet.http.HttpServlet.service(HttpServlet.java:790)\n\tat org.eclipse.jetty.servlet.ServletHolder.handle(ServletHolder.java:791)\n\tat org.eclipse.jetty.servlet.ServletHandler.doHandle(ServletHandler.java:550)\n\tat org.eclipse.jetty.server.handler.ScopedHandler.handle(ScopedHandler.java:143)\n\tat org.eclipse.jetty.security.SecurityHandler.handle(SecurityHandler.java:602)\n\tat org.eclipse.jetty.server.handler.HandlerWrapper.handle(HandlerWrapper.java:127)\n\tat org.eclipse.jetty.server.handler.ScopedHandler.nextHandle(ScopedHandler.java:235)\n\tat org.eclipse.jetty.server.session.SessionHandler.doHandle(SessionHandler.java:1624)\n\tat org.eclipse.jetty.server.handler.ScopedHandler.nextHandle(ScopedHandler.java:233)\n\tat org.eclipse.jetty.server.handler.ContextHandler.doHandle(ContextHandler.java:1435)\n\tat org.eclipse.jetty.server.handler.ScopedHandler.nextScope(ScopedHandler.java:188)\n\tat org.eclipse.jetty.servlet.ServletHandler.doScope(ServletHandler.java:501)\n\tat org.eclipse.jetty.server.session.SessionHandler.doScope(SessionHandler.java:1594)\n\tat org.eclipse.jetty.server.handler.ScopedHandler.nextScope(ScopedHandler.java:186)\n\tat org.eclipse.jetty.server.handler.ContextHandler.doScope(ContextHandler.java:1350)\n\tat org.eclipse.jetty.server.handler.ScopedHandler.handle(ScopedHandler.java:141)\n\tat org.eclipse.jetty.server.handler.gzip.GzipHandler.handle(GzipHandler.java:763)\n\tat org.eclipse.jetty.server.handler.HandlerWrapper.handle(HandlerWrapper.java:127)\n\tat org.eclipse.jetty.server.Server.handle(Server.java:516)\n\tat org.eclipse.jetty.server.HttpChannel.lambda$handle$1(HttpChannel.java:388)\n\tat org.eclipse.jetty.server.HttpChannel.dispatch(HttpChannel.java:633)\n\tat org.eclipse.jetty.server.HttpChannel.handle(HttpChannel.java:380)\n\tat org.eclipse.jetty.server.HttpConnection.onFillable(HttpConnection.java:277)\n\tat org.eclipse.jetty.io.AbstractConnection$ReadCallback.succeeded(AbstractConnection.java:311)\n\tat org.eclipse.jetty.io.FillInterest.fillable(FillInterest.java:105)\n\tat org.eclipse.jetty.io.ChannelEndPoint$1.run(ChannelEndPoint.java:104)\n\tat org.eclipse.jetty.util.thread.strategy.EatWhatYouKill.runTask(EatWhatYouKill.java:336)\n\tat org.eclipse.jetty.util.thread.strategy.EatWhatYouKill.doProduce(EatWhatYouKill.java:313)\n\tat org.eclipse.jetty.util.thread.strategy.EatWhatYouKill.tryProduce(EatWhatYouKill.java:171)\n\tat org.eclipse.jetty.util.thread.strategy.EatWhatYouKill.run(EatWhatYouKill.java:129)\n\tat org.eclipse.jetty.util.thread.ReservedThreadExecutor$ReservedThread.run(ReservedThreadExecutor.java:383)\n\t... 3 more\nCaused by: java.lang.RuntimeException: org.apache.hadoop.hive.ql.parse.ParseException:line 2:83 cannot recognize input near '<EOF>' '<EOF>' '<EOF>'\n\tat org.apache.hadoop.hive.ql.parse.ParseDriver.parse(ParseDriver.java:144)\n\tat org.apache.hadoop.hive.ql.parse.ParseUtils.parse(ParseUtils.java:79)\n\tat org.apache.hadoop.hive.ql.parse.ParseUtils.parse(ParseUtils.java:72)\n\tat org.apache.hadoop.hive.ql.Compiler.parse(Compiler.java:170)\n\tat org.apache.hadoop.hive.ql.Compiler.compile(Compiler.java:103)\n\tat org.apache.hadoop.hive.ql.Driver.compile(Driver.java:194)\n\tat org.apache.hadoop.hive.ql.Driver.compileInternal(Driver.java:614)\n\tat org.apache.hadoop.hive.ql.Driver.compileAndRespond(Driver.java:560)\n\tat org.apache.hadoop.hive.ql.Driver.compileAndRespond(Driver.java:554)\n\tat org.apache.hadoop.hive.ql.reexec.ReExecDriver.compileAndRespond(ReExecDriver.java:127)\n\tat org.apache.hive.service.cli.operation.SQLOperation.prepare(SQLOperation.java:200)\n\t... 47 more\n"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465262583_95235974",
+      "id": "20211210-121313_2073583599",
+      "dateCreated": "2022-05-13T15:07:42-0300",
+      "dateStarted": "2023-06-15T16:40:33-0300",
+      "dateFinished": "2023-06-15T16:40:45-0300",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:57"
+    },
+    {
+      "title": "Tabla \"inclusiva\" para campaña cater empresas (UNICA VEZ)",
+      "text": "%jdbc(hive)\ndrop table sandbox_datascientist.jfp_campania_terminales_empresas_cater;\ncreate table sandbox_datascientist.jfp_campania_terminales_empresas_cater as\nselect * from (\nselect \nb.suscripcion_id,\na.ani,\na.tipo_cliente_de,\nb.Tipo_Organizacion_DE,\na.fl_apple fl_apple_viejo, \na.fl_terminal, \na.fl_grupo_so, \na.fl_grupo_accion,\n--1 as fl_campania,\nc.fabricante_equipo_de marca_equipo,\nCASE WHEN a.fl_apple is null and c.fabricante_equipo_de LIKE '%Apple Inc%' THEN 1 \n    when a.fl_apple is null and c.fabricante_equipo_de NOT LIKE '%Apple Inc%' then 0 ELSE a.fl_apple end AS fl_apple,\ncase when b.Suscripcion_CD LIKE 'K%' then 1 else 0 end fl_kite,\nb.m2m_fl,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\njoin ACCESS_DATA.AT_Parque_M b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202202 --a.mes=b.periodo_nr\nleft join access_data.AT_Tacs_Gsma_M c\non b.tac_nr = c.tac_nr and c.periodo_nr = 202202\nwhere \na.mes=202202\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so='Obsoleto'\n--and a.tipo_cliente_de not like '%Individuo%'\n--and fl_apple=1\n)x where x.orden=1\n;\n\n/*INSERT OVERWRITE DIRECTORY 'hdfs://hdpvelez/user/j_braunstein/campania_terminales_empresas_cater' ROW FORMAT DELIMITED FIELDS TERMINATED BY '|' NULL DEFINED AS '' STORED AS TEXTFILE \n\nSELECT\ncast(suscripcion_id as varchar(20)) as suscripcion_id,\ncast(ani as varchar(20)) as ani,\ntipo_cliente_de,\nTipo_Organizacion_DE,\ncast(fl_apple as int) as fl_apple\nFROM sandbox_datascientist.jfp_campania_terminales_empresas_cater\nwhere a.tipo_cliente_de not like '%Individuo%';",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:06-0300",
+      "config": {
+        "tableHide": true,
+        "editorSetting": {
+          "editOnDblClick": false,
+          "language": "sql",
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "title": true,
+        "results": {},
+        "enabled": false,
+        "fontSize": 9
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465262643_1637272791",
+      "id": "20220315-145923_857328541",
+      "dateCreated": "2022-05-13T15:07:42-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:58"
+    },
+    {
+      "title": "Creación de la tabla en Tera",
+      "text": "create table SBX_PROC_CIERRE.aoc_jbr_campania_terminales_empresas_cater \r\n(\r\nsuscripcion_id varchar(20),\r\nani varchar(20),\r\ntipo_cliente_de varchar(20),\r\nTipo_Organizacion_DE varchar(20),\r\nfl_apple int\r\n) primary index (suscripcion_id);",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:06-0300",
+      "config": {
+        "editorSetting": {
+          "editOnDblClick": false,
+          "language": "sql",
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "title": true,
+        "results": {},
+        "enabled": false,
+        "fontSize": 9
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465262691_-1656549385",
+      "id": "20220316-100743_1885008518",
+      "dateCreated": "2022-05-13T15:07:42-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:59"
+    },
+    {
+      "title": "SQOOP EXPORT",
+      "text": "\r\n",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:06-0300",
+      "config": {
+        "tableHide": true,
+        "editorSetting": {
+          "editOnDblClick": false,
+          "language": "sql",
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "title": true,
+        "results": {},
+        "enabled": false,
+        "fontSize": 9
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "ERROR",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "bash: $'\\r': command not found\nWarning: /usr/hdp/2.6.5.0-292/hbase does not exist! HBase imports will fail.\nPlease set $HBASE_HOME to the root of your HBase installation.\nWarning: /usr/hdp/2.6.5.0-292/accumulo does not exist! Accumulo imports will fail.\nPlease set $ACCUMULO_HOME to the root of your Accumulo installation.\n22/03/16 09:39:52 INFO sqoop.Sqoop: Running Sqoop version: 1.4.6.2.6.5.0-292\n22/03/16 09:39:52 ERROR tool.BaseSqoopTool: Error parsing arguments for export:\n22/03/16 09:39:52 ERROR tool.BaseSqoopTool: Unrecognized argument: \r\n\nTry --help for usage instructions.\nbash: line 2: --connection-manager: command not found\nbash: line 3: --username: command not found\nbash: line 4: --password: command not found\nbash: line 5: --num-mappers: command not found\nbash: line 6: --table: command not found\nbash: line 7: --export-dir: command not found\nbash: line 8: --input-fields-terminated-by: command not found\nbash: line 9: --batch: command not found\n"
+          },
+          {
+            "type": "TEXT",
+            "data": "ExitValue: 127"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465262742_388854067",
+      "id": "20220315-170944_1632982792",
+      "dateCreated": "2022-05-13T15:07:42-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:60"
+    },
+    {
+      "title": "Armado de salida para campaña --> Tablas a ABT no gobernada b2b b2c (VIEJO)",
+      "text": "%jdbc (hive)\n\n/* ng_hd_var08_fl */ --Flag que indica si el suscriptor aplica a campaña de actualización SO Android Mesa Terminales\ndrop table sandbox.jg_campania_terminales_actualizacion_android;\ncreate table sandbox.jg_campania_terminales_actualizacion_android stored as orc as \nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202110 --a.mes=b.periodo_nr --# si está la abt se cruza con el mes, sino N-1\nwhere\na.mes=202110\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so='actualizable'\nand fl_apple=0\n)x where x.orden=1\n;\n\n/* ng_hd_var09_fl */--Flag que indica si el suscriptor aplica a campaña de actualización SO IOS Mesa Terminales\ndrop table sandbox.jg_campania_terminales_actualizacion_ios;\ncreate table sandbox.jg_campania_terminales_actualizacion_ios stored as orc as\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202110 --a.mes=b.periodo_nr\nwhere \na.mes=202110 \n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so='actualizable'\nand fl_apple=1\n)x where x.orden=1\n;\n\n/* ng_hd_var10_fl */ --Flag que indica si el suscriptor aplica a campaña de cater IOS Mesa Terminales\ndrop table sandbox.jg_campania_terminales_cater_ios;\ncreate table sandbox.jg_campania_terminales_cater_ios stored as orc as\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202110 --a.mes=b.periodo_nr\nwhere \na.mes=202110\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand a.fl_total_so='Obsoleto'\nand fl_apple=1\n)x where x.orden=1\n;\n\n/* ng_hd_var11_fl */ --Flag que indica si el suscriptor aplica a campaña de cater Android Mesa Terminales\ndrop table sandbox.jg_campania_terminales_cater_android;\ncreate table sandbox.jg_campania_terminales_cater_android stored as orc as\nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202110 --a.mes=b.periodo_nr\nwhere \na.mes=202110 \n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\nand ((a.fl_total_so='Obsoleto' and fl_apple=0)\n--or (fl_total_so='SO no identificado' and fl_so_generico in ('Firefox', 'Proprietary', 'Other', 'BlackBerry', 'Windows Phone', 'Windows Mobile', 'Tizen', 'Android'))\n)\n)x where x.orden=1\n;\n\n/* ng_hd_var12_fl */ --Flag que indica si el suscriptor aplica a campaña de casim Mesa Terminales\ndrop table sandbox.jg_campania_terminales_casim;\ncreate table sandbox.jg_campania_terminales_casim stored as orc as \nselect * from (\nselect \nb.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202110 --a.mes=b.periodo_nr\nwhere \na.mes=202110 \nand a.fl_terminal='Sin Usim'\n--and a.tipo_cliente_de in('Individuo','Empresa')\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\n)x where x.orden=1\n;",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:06-0300",
+      "config": {
+        "tableHide": true,
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "title": true,
+        "results": {},
+        "enabled": false,
+        "fontSize": 9
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465262794_764270311",
+      "id": "20210610-110308_451459826",
+      "dateCreated": "2022-05-13T15:07:42-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:61"
+    },
+    {
+      "title": "Armado de salida para campaña --> Tablas a ABT no gobernada otras variables ad hoc (VIEJO)",
+      "text": "%jdbc (hive)\n\n/*ng_hd_var13_fl Flag que indica si el suscriptor estando en la base potencial actualizó su SO*/\ndrop table sandbox.jg_campania_terminales_actualizacion_android_empresas;\ncreate table sandbox.jg_campania_terminales_actualizacion_android_empresas stored as orc as \nselect * from (\nselect \nb.suscripcion_id,\na.ani,\n1 as fl_campania,\nrow_number ()  over (partition by b.suscripcion_id order by b.suscripcion_id) as orden\nfrom (select  distinct ani from sandbox_datascientist.aoc_jbr_campania_terminales_anis_bono_01) a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=202110\n)x where x.orden=1\n;\n\n\n/*ng_hd_var14_fl Flag que indica si el suscriptor aplica a la campaña de mal configurados*/\ndrop table sandbox.jg_campania_terminales_actualizacion_ios_empresas;\ncreate table sandbox.jg_campania_terminales_actualizacion_ios_empresas stored as orc as\nselect * from (\nselect \nc.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by c.suscripcion_id order by c.suscripcion_id) as orden\nfrom sandbox.jg_terminales_mal_config a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil c on a.ani=c.valor_recurso_primario_cd and c.periodo_nr=202110\nwhere \na.mes=202110\n)x where x.orden=1\n;\n\n",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:06-0300",
+      "config": {
+        "tableHide": true,
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "title": true,
+        "results": {},
+        "enabled": false,
+        "fontSize": 9
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "ERROR",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "org.apache.hive.service.cli.HiveSQLException: Error while compiling statement: FAILED: ParseException line 1:0 cannot recognize input near '<EOF>' '<EOF>' '<EOF>'\n\tat org.apache.hive.jdbc.Utils.verifySuccess(Utils.java:277)\n\tat org.apache.hive.jdbc.Utils.verifySuccessWithInfo(Utils.java:263)\n\tat org.apache.hive.jdbc.HiveStatement.runAsyncOnServer(HiveStatement.java:303)\n\tat org.apache.hive.jdbc.HiveStatement.execute(HiveStatement.java:244)\n\tat org.apache.commons.dbcp2.DelegatingStatement.execute(DelegatingStatement.java:291)\n\tat org.apache.commons.dbcp2.DelegatingStatement.execute(DelegatingStatement.java:291)\n\tat org.apache.zeppelin.jdbc.JDBCInterpreter.executeSql(JDBCInterpreter.java:682)\n\tat org.apache.zeppelin.jdbc.JDBCInterpreter.interpret(JDBCInterpreter.java:763)\n\tat org.apache.zeppelin.interpreter.LazyOpenInterpreter.interpret(LazyOpenInterpreter.java:101)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreterServer$InterpretJob.jobRun(RemoteInterpreterServer.java:502)\n\tat org.apache.zeppelin.scheduler.Job.run(Job.java:175)\n\tat org.apache.zeppelin.scheduler.ParallelScheduler$JobRunner.run(ParallelScheduler.java:162)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.access$201(ScheduledThreadPoolExecutor.java:180)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:293)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: org.apache.hive.service.cli.HiveSQLException: Error while compiling statement: FAILED: ParseException line 1:0 cannot recognize input near '<EOF>' '<EOF>' '<EOF>'\n\tat org.apache.hive.service.cli.operation.Operation.toSQLException(Operation.java:324)\n\tat org.apache.hive.service.cli.operation.SQLOperation.prepare(SQLOperation.java:148)\n\tat org.apache.hive.service.cli.operation.SQLOperation.runInternal(SQLOperation.java:228)\n\tat org.apache.hive.service.cli.operation.Operation.run(Operation.java:264)\n\tat org.apache.hive.service.cli.session.HiveSessionImpl.executeStatementInternal(HiveSessionImpl.java:479)\n\tat org.apache.hive.service.cli.session.HiveSessionImpl.executeStatementAsync(HiveSessionImpl.java:466)\n\tat org.apache.hive.service.cli.CLIService.executeStatementAsync(CLIService.java:315)\n\tat org.apache.hive.service.cli.thrift.ThriftCLIService.ExecuteStatement(ThriftCLIService.java:509)\n\tat org.apache.hive.service.cli.thrift.TCLIService$Processor$ExecuteStatement.getResult(TCLIService.java:1377)\n\tat org.apache.hive.service.cli.thrift.TCLIService$Processor$ExecuteStatement.getResult(TCLIService.java:1362)\n\tat org.apache.thrift.ProcessFunction.process(ProcessFunction.java:39)\n\tat org.apache.thrift.TBaseProcessor.process(TBaseProcessor.java:39)\n\tat org.apache.thrift.server.TServlet.doPost(TServlet.java:83)\n\tat org.apache.hive.service.cli.thrift.ThriftHttpServlet.doPost(ThriftHttpServlet.java:206)\n\tat javax.servlet.http.HttpServlet.service(HttpServlet.java:727)\n\tat javax.servlet.http.HttpServlet.service(HttpServlet.java:820)\n\tat org.eclipse.jetty.servlet.ServletHolder.handle(ServletHolder.java:565)\n\tat org.eclipse.jetty.servlet.ServletHandler.doHandle(ServletHandler.java:479)\n\tat org.eclipse.jetty.server.session.SessionHandler.doHandle(SessionHandler.java:225)\n\tat org.eclipse.jetty.server.handler.ContextHandler.doHandle(ContextHandler.java:1031)\n\tat org.eclipse.jetty.servlet.ServletHandler.doScope(ServletHandler.java:406)\n\tat org.eclipse.jetty.server.session.SessionHandler.doScope(SessionHandler.java:186)\n\tat org.eclipse.jetty.server.handler.ContextHandler.doScope(ContextHandler.java:965)\n\tat org.eclipse.jetty.server.handler.ScopedHandler.handle(ScopedHandler.java:117)\n\tat org.eclipse.jetty.server.handler.HandlerWrapper.handle(HandlerWrapper.java:111)\n\tat org.eclipse.jetty.server.Server.handle(Server.java:349)\n\tat org.eclipse.jetty.server.AbstractHttpConnection.handleRequest(AbstractHttpConnection.java:449)\n\tat org.eclipse.jetty.server.AbstractHttpConnection$RequestHandler.content(AbstractHttpConnection.java:925)\n\tat org.eclipse.jetty.http.HttpParser.parseNext(HttpParser.java:857)\n\tat org.eclipse.jetty.http.HttpParser.parseAvailable(HttpParser.java:235)\n\tat org.eclipse.jetty.server.AsyncHttpConnection.handle(AsyncHttpConnection.java:76)\n\tat org.eclipse.jetty.io.nio.SelectChannelEndPoint.handle(SelectChannelEndPoint.java:609)\n\tat org.eclipse.jetty.io.nio.SelectChannelEndPoint$1.run(SelectChannelEndPoint.java:45)\n\t... 3 more\nCaused by: java.lang.RuntimeException: org.apache.hadoop.hive.ql.parse.ParseException:line 1:0 cannot recognize input near '<EOF>' '<EOF>' '<EOF>'\n\tat org.apache.hadoop.hive.ql.parse.ParseDriver.parse(ParseDriver.java:214)\n\tat org.apache.hadoop.hive.ql.parse.ParseDriver.parse(ParseDriver.java:171)\n\tat org.apache.hadoop.hive.ql.Driver.compile(Driver.java:438)\n\tat org.apache.hadoop.hive.ql.Driver.compile(Driver.java:321)\n\tat org.apache.hadoop.hive.ql.Driver.compileInternal(Driver.java:1224)\n\tat org.apache.hadoop.hive.ql.Driver.compileAndRespond(Driver.java:1218)\n\tat org.apache.hive.service.cli.operation.SQLOperation.prepare(SQLOperation.java:146)\n\t... 34 more\n"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465262846_-599298482",
+      "id": "20210610-111510_499995218",
+      "dateCreated": "2022-05-13T15:07:42-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:62"
+    },
+    {
+      "title": "TABLA A NBA (en desuso)",
+      "text": "%jdbc (hive)\ndrop table sandbox.jg_campania_so_nba_actualizacion_so;\ncreate table sandbox.jg_campania_so_nba_actualizacion_so as\nselect \nani,\ntipo_cliente_de as segmento,\n'' as marca,\n'' as modelo,\nversion_num as so_pre,\ncase when producto= 'Prepago' then 1 else 0 end as fl_prepago,\ntac_nr tac_pre\t,\ncei_ind_experiencia_total_nr cei_pre\nfrom sandbox.jg_tablero_terminales \nwhere  mes=202108 \nand tipo_cliente_de='Individuo'\nand unidad_negocio='Movil'\nand fl_navegador='NAVEGADOR'\nand fl_total_so='actualizable'\nand fl_apple in (0,1)\n;",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:06-0300",
+      "config": {
+        "tableHide": true,
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "title": true,
+        "results": {},
+        "enabled": false,
+        "fontSize": 9
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          },
+          {
+            "type": "TEXT",
+            "data": "Query executed successfully. Affected rows : -1"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465262898_-278535518",
+      "id": "20210610-130824_709984435",
+      "dateCreated": "2022-05-13T15:07:42-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:63"
+    },
+    {
+      "title": "Otros flags en desuso",
+      "text": "%jdbc\n\n/*ng_hd_var16_fl terminales 2018 o menor*/\n/*\ndrop table sandbox.jg_campania_terminales_cater_ios_empresas;\ncreate table sandbox.jg_campania_terminales_cater_ios_empresas stored as orc as\nselect * from (\nselect \nc.suscripcion_id,\na.ani,\n1 as fl_campania,\nrow_number ()  over (partition by c.suscripcion_id order by c.suscripcion_id) as orden\nfrom sandbox.jg_terminales_descriptivo_202105 a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil c on a.ani=c.valor_recurso_primario_cd and c.periodo_nr=202105\nwhere 1=1\nand a.mes=202105 \nand a.fl_individuo=0\nand fl_terminal_2018=1\nand fl_2M=0\nand a.unidad_negocio='Movil'\n)x where x.orden=1\n;\n*/\n\n/*ng_hd_var15_fl terminales 2019 o menor*/\n/*\ndrop table sandbox.jg_campania_terminales_cater_android_empresas;\ncreate table sandbox.jg_campania_terminales_cater_android_empresas stored as orc as\nselect * from (\nselect \nc.suscripcion_id,\na.ani,\n1 as fl_campania,\nrow_number ()  over (partition by c.suscripcion_id order by c.suscripcion_id) as orden\nfrom sandbox.jg_terminales_descriptivo_202105 a\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil c on a.ani=c.valor_recurso_primario_cd and c.periodo_nr=202105\nwhere 1=1\nand a.mes=202105 \nand a.fl_individuo=0\nand fl_terminal_2019=1\nand fl_2M=0\nand a.unidad_negocio='Movil'\n)x where x.orden=1\n;\n*/\n\n/*ng_hd_var17_fl*/\n/*\ndrop table sandbox.jg_campania_terminales_casim_empresas;\ncreate table sandbox.jg_campania_terminales_casim_empresas stored as orc as \nselect * from (\nselect \nc.suscripcion_id,\na.*,\n1 as fl_campania,\nrow_number ()  over (partition by c.suscripcion_id order by c.suscripcion_id) as orden\nfrom sandbox.jg_tablero_terminales a\n--join SBX_PLAN_BIENVENIDA.Parque_Unificado_Movil b on a.ani=b.valor_recurso_primario_cd and b.periodo_nr=a.mes\njoin SBX_PLAN_BIENVENIDA.ABT_Suscripcion_Movil c on a.ani=c.valor_recurso_primario_cd and a.mes=c.periodo_nr\nwhere \na.mes=202104 \nand a.fl_terminal='Sin Usim'\nand a.tipo_cliente_de='Empresa'\nand a.unidad_negocio='Movil'\nand a.fl_navegador='NAVEGADOR'\n)x where x.orden=1\n;\n*/",
+      "user": "jpinelli",
+      "dateUpdated": "2024-03-28T20:36:06-0300",
+      "config": {
+        "editorSetting": {
+          "editOnDblClick": false,
+          "language": "sql",
+          "completionSupport": true
+        },
+        "colWidth": 12,
+        "editorMode": "ace/mode/sql",
+        "editorHide": false,
+        "title": true,
+        "results": {},
+        "enabled": false,
+        "fontSize": 9
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1652465262948_-1197389086",
+      "id": "20210907-103729_316585106",
+      "dateCreated": "2022-05-13T15:07:42-0300",
+      "status": "READY",
+      "errorMessage": "",
+      "progressUpdateIntervalMs": 500,
+      "$$hashKey": "object:64"
+    }
+  ],
+  "name": "JPinelli/TERMINALES/Term/7-Campania-MODELO_NUEVO 1",
+  "id": "2H4F56TQJ",
+  "noteParams": {},
+  "noteForms": {},
+  "angularObjects": {
+    "angular:shared_process": [],
+    "jdbc:shared_process": [],
+    "sh:jpinelli:": []
+  },
+  "config": {
+    "isZeppelinNotebookCronEnable": false,
+    "looknfeel": "default",
+    "personalizedMode": "false"
+  },
+  "info": {}
+}
