@@ -1,31 +1,29 @@
-# Portfolio de Fran Pinelli Bernard - Data Scientist
+# Fran Pinelli Bernard - Data Science Portfolio
 
-¡Bienvenido a mi portfolio en GitHub!
+Welcome! This repository showcases projects and experiments that I have developed over the years as a data scientist. The goal is to present a collection of work spanning machine learning, geospatial analysis and data engineering tasks.
 
-## Acerca de mí
+## Projects
+- **Bootcamp-master** – Notebooks from the Python Data Science and Machine Learning Bootcamp.
+- **Choropleth map with time sliders** – Interactive visualization for network monitoring data.
+- **Explore radiobases** – Mapping of telecom base stations by technology.
+- **Fun** – Personal experiments such as training Stable Diffusion on personal images.
+- **Model practice** – Notebooks exploring advanced regression, classification and model evaluation.
+- **Radiobases highways** – Correlation analysis between base stations and highway networks.
+- **Workflow grain model** – Data pipeline and model training for grain quality prediction.
+- **sql processes** – JSON definitions for SQL-based ETL processes.
 
-¡Hola! Soy Fran Pinelli Bernard, un apasionado Data Scientist con experiencia en diversas áreas del análisis de datos y aprendizaje automático. 
-Esta sección aún está en desarollo pero incluirá:
+Each folder contains notebooks, scripts or reports related to its topic. Some material originates from older work but remains here for reference.
 
-## Proyectos Destacados
+## Technologies
+- **Languages:** Python, R, SQL, C++, JavaScript
+- **Libraries:** Pandas, NumPy, scikit-learn, TensorFlow, Keras
+- **Visualization:** Matplotlib, Seaborn, Plotly, Tableau, MicroStrategy, PowerBI
+- **Other tools:** Git, Docker
 
-Aquí encontrarás una selección de algunos de mis proyectos:
-
-## Tecnologías y Herramientas
-
-- Lenguajes de Programación: Py, R, sql, c++, js
-- Bibliotecas y Frameworks: Pandas, NumPy, Scikit-learn, TensorFlow, Keras
-- Herramientas de Visualización: Matplotlib, Seaborn, Tableau, Microstrategy, PowerBI
-- Bases de Datos: SQL, MongoDB, hadoop, hive, spark
-- Otras: Git, Docker
-
-## Contacto
-
-¡Estoy siempre abierto a nuevas oportunidades y colaboraciones! No dudes en contactarme a través de:
-
+## Contact
+Feel free to reach out for collaboration or opportunities:
 - Email: [jfranciscopinelli@gmail.com](mailto:jfranciscopinelli@gmail.com)
-- LinkedIn: [https://www.linkedin.com/in/juan-francisco-pinelli-bernard/](https://www.linkedin.com/in/juan-francisco-pinelli-bernard/)
+- LinkedIn: <https://www.linkedin.com/in/juan-francisco-pinelli-bernard/>
 
-
-¡Gracias por visitar mi portfolio! Espero que encuentres interesantes mis proyectos y espero poder colaborar contigo en el futuro.
+Thank you for visiting this portfolio!
 
