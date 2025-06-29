@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-
-
 import pandas as pd
 import os
 import numpy as np
-path_root = r"C:\Users\cahernandez\Desktop\AGD\Proyectos\Proyecto Prediccion_perdidas_silos_australianos"
 os.chdir(path_root)
 
 df = pd.read_excel(r"planillas/Estructura_tentativa_tabla_V2.xlsx",
@@ -13,11 +9,7 @@ df = pd.read_excel(r"planillas/Estructura_tentativa_tabla_V2.xlsx",
 df_alm = df.iloc[:,11:56]
 
 
-"""
-for ind_row in df_alm.index:
-    for ind_column in 
-     print(df_alm['pista.1'][ind_row]) 
-"""
+
 matriz = []
 for r in range(0,len(df_alm.index)):
 #for r in range(0,1):   

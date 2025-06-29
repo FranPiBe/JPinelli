@@ -1,14 +1,6 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Nov 30 21:35:31 2020
-
-@author: CAhernandez
-"""
-
 import os
 import pickle
 import numpy as np
-os.chdir(r"C:\Users\cahernandez\Desktop\AGD\Proyectos\Proyecto Prediccion_perdidas_silos_australianos\scripts")
 
 
 

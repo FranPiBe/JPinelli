@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-
-
 import pandas as pd
 import os
 import numpy as np
 
-path_root = r"C:\Users\cahernandez\Desktop\AGD\Proyectos\Proyecto Prediccion_perdidas_silos_australianos"
 os.chdir(path_root)
 
 df = pd.read_excel(r"planillas/Estructura_tentativa_tabla_V2.xlsx",

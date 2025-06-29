@@ -21,7 +21,6 @@ from sklearn import metrics
 from sklearn.ensemble import RandomForestRegressor
 import pickle
 
-os.chdir(r"C:\Users\cahernandez\Desktop\AGD\Proyectos\Proyecto Prediccion_perdidas_silos_australianos\scripts\")
 
 
 df = dd.read_csv(r"tabla_concatenada_v5.csv",header=0)

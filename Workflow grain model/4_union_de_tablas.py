@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-
-
 import pandas as pd
 import os
 import numpy as np
-path_root = r"C:\Users\cahernandez\Desktop\AGD\Proyectos\Proyecto Prediccion_perdidas_silos_australianos"
 os.chdir(path_root)
 
 df1 = pd.read_csv(r"resultados/almacenamiento_2020_v1.csv",header=0)
